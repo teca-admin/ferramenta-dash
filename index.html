@@ -104,10 +104,63 @@
   </div>
   <div style="display:flex;align-items:center;gap:12px">
     <div class="db-status"><div class="db-dot" id="db-dot"></div><span id="db-label">Conectando...</span></div>
+    <button onclick="openShareModal()" id="btn-share" style="display:none;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:var(--white);font-size:12px;font-weight:500;color:var(--dark);cursor:pointer;font-family:Inter,sans-serif">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Compartilhar
+    </button>
     <nav class="main-nav">
       <button class="main-nav-btn active" onclick="switchMain('dashboard',this)">Gráficos</button>
       <button class="main-nav-btn" onclick="switchMain('entrada',this)">Entrada de Dados</button>
     </nav>
+  </div>
+</div>
+
+<!-- MODAL COMPARTILHAR -->
+<div id="share-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a">Compartilhar Visualização</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Gera um link somente leitura, travado no período selecionado</div>
+      </div>
+      <button onclick="closeShareModal()" style="background:none;border:none;font-size:18px;color:#64748b;cursor:pointer">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="form-group">
+        <label>Ano</label>
+        <select class="filter-select" id="share-ano" style="width:100%">
+          <option value="2026">2026</option><option value="2025">2025</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Mês</label>
+        <select class="filter-select" id="share-mes" style="width:100%">
+          <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+          <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+          <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+          <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:8px">Setores visíveis</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="share-setores">
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" value="internacao" checked style="accent-color:#e11d48"> Internação</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" value="nacional" checked style="accent-color:#e11d48"> Carga Nacional</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" value="exportacao" checked style="accent-color:#e11d48"> Exportação</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" value="importacao" checked style="accent-color:#e11d48"> Importação</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" value="sla" checked style="accent-color:#e11d48"> SLA PCGs</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" value="raiox" checked style="accent-color:#e11d48"> Raio-X</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" value="auditoria" checked style="accent-color:#e11d48"> Auditoria 6S</label>
+      </div>
+    </div>
+    <button onclick="gerarLink()" style="width:100%;background:#e11d48;color:#fff;border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;margin-bottom:12px">Gerar Link</button>
+    <div id="share-result" style="display:none">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+        <input id="share-url" readonly style="flex:1;border:none;background:transparent;font-size:11px;color:#0f172a;font-family:monospace;outline:none" value="">
+        <button onclick="copiarLink()" style="background:#0f172a;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap" id="btn-copy">Copiar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -236,20 +289,38 @@
 
 <!-- AUDITORIA 6S -->
 <div class="content" id="sec-auditoria">
-  <div class="kpi-row" id="kpi-auditoria"></div>
-  <div class="charts-grid">
-    <div class="chart-card full">
+  <div class="charts-grid" style="grid-template-columns:220px 1fr;align-items:stretch">
+    <!-- KPI cards empilhados à esquerda -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="kpi-card" style="flex:1">
+        <div class="kpi-label">Último Resultado</div>
+        <div class="kpi-val" id="aud-kpi-ult">—</div>
+        <div class="kpi-sub" id="aud-kpi-ult-sub"></div>
+      </div>
+      <div class="kpi-card" style="flex:1">
+        <div class="kpi-label">Média do Período</div>
+        <div class="kpi-val" id="aud-kpi-med">—</div>
+        <div class="kpi-sub" id="aud-kpi-med-sub"></div>
+      </div>
+    </div>
+    <!-- Gráfico de rosca à direita -->
+    <div class="chart-card">
       <div class="chart-head">
         <div class="funnel-title-row">
-          <div><div class="chart-title">Auditoria 6S — Resultado (%)</div><div class="chart-sub">Evolução mensal do resultado percentual</div></div>
+          <div><div class="chart-title">Auditoria 6S — Resultado (%)</div><div class="chart-sub">Resultado percentual — rosca do mês/período selecionado</div></div>
           <div class="card-filter">
             <span class="card-filter-label">Mês isolado:</span>
-            <select class="card-filter-select" id="aud-mes-iso" onchange="renderAuditoria()"><option value="0">— Acumulado —</option></select>
+            <select class="card-filter-select" id="aud-mes-iso" onchange="renderAuditoria()"><option value="0">— Acumulado (média) —</option></select>
           </div>
         </div>
       </div>
-      <div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Resultado %</span></div>
-      <div style="position:relative;height:300px"><canvas id="c-auditoria" role="img" aria-label="Auditoria 6S"></canvas></div>
+      <div style="position:relative;height:280px;display:flex;align-items:center;justify-content:center">
+        <canvas id="c-auditoria" role="img" aria-label="Auditoria 6S" style="max-width:280px"></canvas>
+        <div id="aud-donut-center" style="position:absolute;text-align:center;pointer-events:none">
+          <div id="aud-donut-val" style="font-size:32px;font-weight:700;color:#0f172a;line-height:1">—</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">resultado</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -846,7 +917,7 @@ function renderRaioX(){
 function buildAuditoriaMonthSelect(){
   const sel=document.getElementById('aud-mes-iso');if(!sel)return;
   const prev=sel.value;
-  sel.innerHTML='<option value="0">— Acumulado —</option>';
+  sel.innerHTML='<option value="0">— Acumulado (média) —</option>';
   getMeses(currentMes).forEach(m=>{
     const hasD=auditoriaData.some(d=>d.ano===currentAno&&d.mes===m);
     const opt=document.createElement('option');opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');
@@ -859,16 +930,65 @@ function renderAuditoria(){
   const ano=currentAno,mes=currentMes;
   buildAuditoriaMonthSelect();
   const iso=parseInt(document.getElementById('aud-mes-iso').value)||0;
-  let labels,data;
-  if(iso===0){const ms=getMeses(mes);labels=ms.map(m=>MESES_LABEL[m-1]);data=ms.map(m=>{const r=auditoriaData.find(d=>d.ano===ano&&d.mes===m);return r?r.resultado:null;});}
-  else{labels=[MESES_LABEL[iso-1]];const r=auditoriaData.find(d=>d.ano===ano&&d.mes===iso);data=[r?r.resultado:null];}
-  makeLineChartWithLabels('c-auditoria',labels,[{label:'Resultado %',data,backgroundColor:'#0f172a15',borderColor:'#0f172a',borderWidth:2.5,pointRadius:6,pointBackgroundColor:'#fff',pointBorderColor:'#0f172a',pointBorderWidth:2.5,tension:.35,fill:true,spanGaps:false}]);
-  const hasAny=data.some(v=>v!==null);
-  if(!hasAny){renderKPI('kpi-auditoria',[{label:'Nenhum dado inserido',val:'—',delta:null,sub:'Acesse "Entrada de Dados"'}]);return;}
-  const vals=data.filter(v=>v!==null);
-  const med=(vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(1);
-  const ult=vals[vals.length-1];
-  renderKPI('kpi-auditoria',[{label:'Último Resultado',val:ult+'%',delta:null,sub:labels[data.lastIndexOf(ult)]||''},{label:'Média do Período',val:med+'%',delta:null,sub:`${ano}`}]);
+
+  let valor=null, subLabel='';
+  if(iso===0){
+    const vals=getMeses(mes).map(m=>{const r=auditoriaData.find(d=>d.ano===ano&&d.mes===m);return r?r.resultado:null;}).filter(v=>v!==null);
+    if(vals.length) valor=parseFloat((vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(1));
+    subLabel=`Média Jan–${MESES_LABEL[mes-1]}/${ano}`;
+  } else {
+    const r=auditoriaData.find(d=>d.ano===ano&&d.mes===iso);
+    if(r) valor=r.resultado;
+    subLabel=`${MESES_LABEL[iso-1]}/${ano}`;
+  }
+
+  // KPI cards via direct DOM (not renderKPI since layout is custom)
+  const allVals=getMeses(mes).map(m=>{const r=auditoriaData.find(d=>d.ano===ano&&d.mes===m);return r?r.resultado:null;}).filter(v=>v!==null);
+  const ult = allVals.length ? allVals[allVals.length-1] : null;
+  const med = allVals.length ? parseFloat((allVals.reduce((s,v)=>s+v,0)/allVals.length).toFixed(1)) : null;
+
+  const ultEl=document.getElementById('aud-kpi-ult');
+  const medEl=document.getElementById('aud-kpi-med');
+  const ultSub=document.getElementById('aud-kpi-ult-sub');
+  const medSub=document.getElementById('aud-kpi-med-sub');
+  if(ultEl) ultEl.textContent = ult!==null ? ult+'%' : '—';
+  if(medEl) medEl.textContent = med!==null ? med+'%' : '—';
+  if(ultSub) ultSub.textContent = `${ano}`;
+  if(medSub) medSub.textContent = `Jan–${MESES_LABEL[mes-1]}/${ano}`;
+
+  // Donut chart
+  if(chartInstances['c-auditoria']) chartInstances['c-auditoria'].destroy();
+  const ctx=document.getElementById('c-auditoria');if(!ctx)return;
+  const v = valor !== null ? valor : 0;
+  const resto = Math.max(0, 100 - v);
+  const cor = v >= 80 ? '#22c55e' : v >= 60 ? '#f59e0b' : '#e11d48';
+
+  chartInstances['c-auditoria']=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      datasets:[{
+        data:[v, resto],
+        backgroundColor:[cor,'#f1f5f9'],
+        borderWidth:0,
+        hoverOffset:0
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      cutout:'72%',
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      animation:{animateRotate:true,duration:600}
+    }
+  });
+
+  // Center value
+  const center=document.getElementById('aud-donut-center');
+  const valEl=document.getElementById('aud-donut-val');
+  if(valEl) valEl.textContent = valor!==null ? valor+'%' : '—';
+  if(valEl) valEl.style.color = valor!==null ? cor : '#94a3b8';
+  // subtitle below value
+  const subEl=document.getElementById('aud-donut-sub');
+  if(subEl) subEl.textContent=subLabel;
 }
 
 function renderCurrentSector(){
@@ -890,131 +1010,6 @@ function buildMonthSelect(selectId,ano,checkFn){
   for(let m=1;m<=12;m++){const hasD=checkFn(ano,m);const opt=document.createElement('option');opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');if(hasD){opt.style.fontWeight='700';opt.style.color='#0f172a';}sel.appendChild(opt);}
   sel.value=prev;
 }
-function hasSLAData(ano,mes){return slaData.some(d=>d.ano===ano&&d.mes===mes);}
-function hasRaioXData(ano,mes){return raioxData.some(d=>d.ano===ano&&d.mes===mes);}
-function hasAuditoriaData(ano,mes){return auditoriaData.some(d=>d.ano===ano&&d.mes===mes);}
-function hasImpFormData(ano,mes){return impData.some(d=>d.ano===ano&&d.mes===mes);}
-
-function updateFormMonthHighlights(){
-  const sA=parseInt(document.getElementById('form-ano').value)||2026;
-  const rA=parseInt(document.getElementById('form-raiox-ano').value)||2026;
-  const aA=parseInt(document.getElementById('form-aud-ano').value)||2026;
-  const iA=parseInt(document.getElementById('form-imp-ano').value)||2026;
-  buildMonthSelect('form-mes',sA,hasSLAData);
-  buildMonthSelect('form-raiox-mes',rA,hasRaioXData);
-  buildMonthSelect('form-aud-mes',aA,hasAuditoriaData);
-  buildMonthSelect('form-imp-mes',iA,hasImpFormData);
-}
-
-function updateDashMonthSelect(){
-  const ano=parseInt(document.getElementById('sel-ano').value)||2026;
-  const sel=document.getElementById('sel-mes');const prev=parseInt(sel.value)||2;sel.innerHTML='';
-  for(let m=1;m<=12;m++){const hasD=hasMovData(ano,m);const opt=document.createElement('option');opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');if(hasD)opt.style.fontWeight='700';sel.appendChild(opt);}
-  sel.value=hasMovData(ano,prev)?prev:(maxMesComDados(ano)||1);
-  currentMes=parseInt(sel.value);
-}
-
-// ============================================================
-// NAV
-// ============================================================
-function switchMain(view,btn){
-  document.querySelectorAll('.main-nav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-  const isDash=view==='dashboard';
-  document.getElementById('filter-bar').style.display=isDash?'flex':'none';
-  document.getElementById('sector-nav').style.display=isDash?'flex':'none';
-  document.querySelectorAll('.content').forEach(c=>c.style.display='none');
-  document.getElementById('view-entrada').style.display=isDash?'none':'block';
-  if(isDash){document.getElementById('sec-'+currentSector).style.display='block';renderCurrentSector();}
-  else updateFormMonthHighlights();
-}
-function switchSector(sec,btn){
-  currentSector=sec;
-  document.querySelectorAll('.sector-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-  document.querySelectorAll('.content').forEach(c=>c.style.display='none');
-  document.getElementById('sec-'+sec).style.display='block';
-  renderCurrentSector();
-}
-function applyFilters(){
-  const newAno=parseInt(document.getElementById('sel-ano').value);
-  if(newAno!==currentAno){currentAno=newAno;updateDashMonthSelect();}
-  currentMes=parseInt(document.getElementById('sel-mes').value);
-  updatePeriodoInfo();renderCurrentSector();
-}
-function setView(v){
-  currentView=v;
-  document.getElementById('btn-acum').classList.toggle('active',v==='acumulado');
-  document.getElementById('btn-men').classList.toggle('active',v==='mensal');
-  renderCurrentSector();
-}
-function updatePeriodoInfo(){
-  const ant=currentAno-1;
-  document.getElementById('periodo-info').textContent=currentView==='acumulado'
-    ?`Jan–${MESES_LABEL[currentMes-1]}/${currentAno} vs Jan–${MESES_LABEL[currentMes-1]}/${ant}`
-    :`Mês a mês até ${MESES_LABEL[currentMes-1]}/${currentAno}`;
-}
-
-// ============================================================
-// FORM SAVES — SUPABASE
-// ============================================================
-function showMsg(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',3000);}}
-function showErr(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',4000);}}
-
-async function saveSLA(){
-  const ano=parseInt(document.getElementById('form-ano').value);
-  const mes=parseInt(document.getElementById('form-mes').value);
-  const setores=['internacao','paletizada','nacional','exportacao','importacao'];
-  const rows=[];
-  setores.forEach(s=>{const v=parseFloat(document.getElementById('sla-'+s).value);if(!isNaN(v)&&v>0)rows.push({ano,mes,setor:s,valor:v});});
-  if(!rows.length)return;
-  try{
-    await sbFetch('sla_pcg','POST',rows);
-    // update local cache
-    rows.forEach(r=>{slaData=slaData.filter(d=>!(d.ano===r.ano&&d.mes===r.mes&&d.setor===r.setor));slaData.push(r);});
-    updateFormMonthHighlights();showMsg('msg-sla');
-  }catch(e){console.error(e);showErr('err-sla');}
-}
-
-async function saveRaioX(){
-  const ano=parseInt(document.getElementById('form-raiox-ano').value);
-  const mes=parseInt(document.getElementById('form-raiox-mes').value);
-  const aud=parseFloat(document.getElementById('rx-auditados').value)||0;
-  const insp=parseFloat(document.getElementById('rx-inspecionados').value)||0;
-  const nao=parseFloat(document.getElementById('rx-nao-inspecionados').value)||0;
-  if(!aud)return;
-  try{
-    await sbFetch('raiox','POST',[{ano,mes,auditados:aud,inspecionados:insp,nao_inspecionados:nao}]);
-    raioxData=raioxData.filter(d=>!(d.ano===ano&&d.mes===mes));
-    raioxData.push({ano,mes,auditados:aud,inspecionados:insp,nao_inspecionados:nao});
-    updateFormMonthHighlights();showMsg('msg-raiox');
-  }catch(e){console.error(e);showErr('err-raiox');}
-}
-
-async function saveAuditoria(){
-  const ano=parseInt(document.getElementById('form-aud-ano').value);
-  const mes=parseInt(document.getElementById('form-aud-mes').value);
-  const res=parseFloat(document.getElementById('aud-resultado').value);
-  if(isNaN(res))return;
-  try{
-    await sbFetch('auditoria_6s','POST',[{ano,mes,resultado:res}]);
-    auditoriaData=auditoriaData.filter(d=>!(d.ano===ano&&d.mes===mes));
-    auditoriaData.push({ano,mes,resultado:res});
-    updateFormMonthHighlights();showMsg('msg-auditoria');
-  }catch(e){console.error(e);showErr('err-auditoria');}
-}
-
-function saveMovimentacao(){
-  const ano=parseInt(document.getElementById('form-mov-ano').value);
-  const mes=parseInt(document.getElementById('form-mov-mes').value);
-  const sub=document.getElementById('form-mov-setor').value;
-  const peso=parseFloat(document.getElementById('mov-peso').value)||0;
-  const vol=parseFloat(document.getElementById('mov-vol').value)||0;
-  const voos=parseFloat(document.getElementById('mov-voos').value)||0;
-  const ulds=parseFloat(document.getElementById('mov-ulds').value)||0;
-  movData=movData.filter(d=>!(d.ano===ano&&d.mes===mes&&d.sub===sub));
-  movData.push({ano,mes,sub,peso,vol,voos,ulds});
-  updateDashMonthSelect();showMsg('msg-mov');
-}
-
 // ============================================================
 // IMPORTAÇÃO — múltiplos voos por CIA/mês
 // ============================================================
@@ -1117,14 +1112,243 @@ function updateSubsetor(){
 }
 
 // ============================================================
+// FIX #2: Clear form fields when month changes
+// ============================================================
+function clearSLAFields(){ ['sla-internacao','sla-paletizada','sla-nacional','sla-exportacao','sla-importacao'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
+function clearRaioXFields(){ ['rx-auditados','rx-inspecionados','rx-nao-inspecionados'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }
+function clearAuditoriaFields(){ const el=document.getElementById('aud-resultado');if(el)el.value=''; }
+
+function updateFormMonthHighlights(){
+  const sA=parseInt(document.getElementById('form-ano').value)||2026;
+  const rA=parseInt(document.getElementById('form-raiox-ano').value)||2026;
+  const aA=parseInt(document.getElementById('form-aud-ano').value)||2026;
+  const iA=parseInt(document.getElementById('form-imp-ano').value)||2026;
+  buildMonthSelect('form-mes',sA,hasSLAData);
+  buildMonthSelect('form-raiox-mes',rA,hasRaioXData);
+  buildMonthSelect('form-aud-mes',aA,hasAuditoriaData);
+  buildMonthSelect('form-imp-mes',iA,hasImpFormData);
+  // Clear fields on every month/year change to avoid confusion
+  clearSLAFields(); clearRaioXFields(); clearAuditoriaFields();
+}
+
+// ============================================================
+// FIX #3: Always reload from Supabase before rendering
+// ============================================================
+async function reloadAndRender(){
+  await loadFromSupabase();
+  renderCurrentSector();
+  updateFormMonthHighlights();
+}
+
+function updateDashMonthSelect(){
+  const ano=parseInt(document.getElementById('sel-ano').value)||2026;
+  const sel=document.getElementById('sel-mes');const prev=parseInt(sel.value)||2;sel.innerHTML='';
+  for(let m=1;m<=12;m++){const hasD=hasMovData(ano,m);const opt=document.createElement('option');opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');if(hasD)opt.style.fontWeight='700';sel.appendChild(opt);}
+  sel.value=hasMovData(ano,prev)?prev:(maxMesComDados(ano)||1);
+  currentMes=parseInt(sel.value);
+}
+
+// ============================================================
+// NAV
+// ============================================================
+function switchMain(view,btn){
+  document.querySelectorAll('.main-nav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  const isDash=view==='dashboard';
+  document.getElementById('filter-bar').style.display=isDash?'flex':'none';
+  document.getElementById('sector-nav').style.display=isDash?'flex':'none';
+  document.querySelectorAll('.content').forEach(c=>c.style.display='none');
+  document.getElementById('view-entrada').style.display=isDash?'none':'block';
+  const shareBtn=document.getElementById('btn-share');
+  if(shareBtn)shareBtn.style.display=isDash?'flex':'none';
+  if(isDash){document.getElementById('sec-'+currentSector).style.display='block';reloadAndRender();}
+  else updateFormMonthHighlights();
+}
+function switchSector(sec,btn){
+  currentSector=sec;
+  document.querySelectorAll('.sector-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.querySelectorAll('.content').forEach(c=>c.style.display='none');
+  document.getElementById('sec-'+sec).style.display='block';
+  renderCurrentSector();
+}
+async function applyFilters(){
+  const newAno=parseInt(document.getElementById('sel-ano').value);
+  if(newAno!==currentAno){currentAno=newAno;updateDashMonthSelect();}
+  currentMes=parseInt(document.getElementById('sel-mes').value);
+  updatePeriodoInfo();
+  await loadFromSupabase(); // FIX #3: sempre busca dados frescos
+  renderCurrentSector();
+}
+function setView(v){
+  currentView=v;
+  document.getElementById('btn-acum').classList.toggle('active',v==='acumulado');
+  document.getElementById('btn-men').classList.toggle('active',v==='mensal');
+  renderCurrentSector();
+}
+function updatePeriodoInfo(){
+  const ant=currentAno-1;
+  document.getElementById('periodo-info').textContent=currentView==='acumulado'
+    ?`Jan–${MESES_LABEL[currentMes-1]}/${currentAno} vs Jan–${MESES_LABEL[currentMes-1]}/${ant}`
+    :`Mês a mês até ${MESES_LABEL[currentMes-1]}/${currentAno}`;
+}
+
+// ============================================================
+// FORM SAVES — SUPABASE
+// ============================================================
+function showMsg(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',3000);}}
+function showErr(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',4000);}}
+
+async function saveSLA(){
+  const ano=parseInt(document.getElementById('form-ano').value);
+  const mes=parseInt(document.getElementById('form-mes').value);
+  const setores=['internacao','paletizada','nacional','exportacao','importacao'];
+  const rows=[];
+  setores.forEach(s=>{const v=parseFloat(document.getElementById('sla-'+s).value);if(!isNaN(v)&&v>0)rows.push({ano,mes,setor:s,valor:v});});
+  if(!rows.length)return;
+  try{
+    await sbFetch('sla_pcg','POST',rows);
+    rows.forEach(r=>{slaData=slaData.filter(d=>!(d.ano===r.ano&&d.mes===r.mes&&d.setor===r.setor));slaData.push(r);});
+    clearSLAFields();
+    updateFormMonthHighlights();showMsg('msg-sla');
+  }catch(e){console.error(e);showErr('err-sla');}
+}
+
+async function saveRaioX(){
+  const ano=parseInt(document.getElementById('form-raiox-ano').value);
+  const mes=parseInt(document.getElementById('form-raiox-mes').value);
+  const aud=parseFloat(document.getElementById('rx-auditados').value)||0;
+  const insp=parseFloat(document.getElementById('rx-inspecionados').value)||0;
+  const nao=parseFloat(document.getElementById('rx-nao-inspecionados').value)||0;
+  if(!aud)return;
+  try{
+    await sbFetch('raiox','POST',[{ano,mes,auditados:aud,inspecionados:insp,nao_inspecionados:nao}]);
+    raioxData=raioxData.filter(d=>!(d.ano===ano&&d.mes===mes));
+    raioxData.push({ano,mes,auditados:aud,inspecionados:insp,nao_inspecionados:nao});
+    clearRaioXFields();
+    updateFormMonthHighlights();showMsg('msg-raiox');
+  }catch(e){console.error(e);showErr('err-raiox');}
+}
+
+async function saveAuditoria(){
+  const ano=parseInt(document.getElementById('form-aud-ano').value);
+  const mes=parseInt(document.getElementById('form-aud-mes').value);
+  const res=parseFloat(document.getElementById('aud-resultado').value);
+  if(isNaN(res))return;
+  try{
+    await sbFetch('auditoria_6s','POST',[{ano,mes,resultado:res}]);
+    auditoriaData=auditoriaData.filter(d=>!(d.ano===ano&&d.mes===mes));
+    auditoriaData.push({ano,mes,resultado:res});
+    clearAuditoriaFields();
+    updateFormMonthHighlights();showMsg('msg-auditoria');
+  }catch(e){console.error(e);showErr('err-auditoria');}
+}
+
+function saveMovimentacao(){
+  const ano=parseInt(document.getElementById('form-mov-ano').value);
+  const mes=parseInt(document.getElementById('form-mov-mes').value);
+  const sub=document.getElementById('form-mov-setor').value;
+  const peso=parseFloat(document.getElementById('mov-peso').value)||0;
+  const vol=parseFloat(document.getElementById('mov-vol').value)||0;
+  const voos=parseFloat(document.getElementById('mov-voos').value)||0;
+  const ulds=parseFloat(document.getElementById('mov-ulds').value)||0;
+  movData=movData.filter(d=>!(d.ano===ano&&d.mes===mes&&d.sub===sub));
+  movData.push({ano,mes,sub,peso,vol,voos,ulds});
+  updateDashMonthSelect();showMsg('msg-mov');
+}
+
+// ============================================================
+// FIX #4: SHARE MODAL + VIEW MODE (read-only link)
+// ============================================================
+function openShareModal(){
+  // Pre-fill with current filters
+  const anoSel=document.getElementById('share-ano');
+  const mesSel=document.getElementById('share-mes');
+  if(anoSel)anoSel.value=currentAno;
+  if(mesSel)mesSel.value=currentMes;
+  document.getElementById('share-result').style.display='none';
+  document.getElementById('share-modal').style.display='flex';
+}
+function closeShareModal(){
+  document.getElementById('share-modal').style.display='none';
+}
+function gerarLink(){
+  const ano=document.getElementById('share-ano').value;
+  const mes=document.getElementById('share-mes').value;
+  const checks=document.querySelectorAll('#share-setores input[type=checkbox]:checked');
+  const setores=[...checks].map(c=>c.value).join(',');
+  const base=window.location.origin+window.location.pathname;
+  const url=`${base}?view=1&ano=${ano}&mes=${mes}&setores=${setores}`;
+  document.getElementById('share-url').value=url;
+  document.getElementById('share-result').style.display='block';
+}
+function copiarLink(){
+  const inp=document.getElementById('share-url');
+  inp.select();navigator.clipboard.writeText(inp.value).then(()=>{
+    const btn=document.getElementById('btn-copy');
+    btn.textContent='Copiado!';btn.style.background='#15803d';
+    setTimeout(()=>{btn.textContent='Copiar';btn.style.background='#0f172a';},2000);
+  });
+}
+
+// VIEW MODE — quando URL contém ?view=1 trava tudo (read-only)
+function checkViewMode(){
+  const params=new URLSearchParams(window.location.search);
+  if(!params.get('view'))return false;
+  const ano=parseInt(params.get('ano'))||2026;
+  const mes=parseInt(params.get('mes'))||2;
+  const setores=(params.get('setores')||'internacao,nacional,exportacao,importacao,sla,raiox,auditoria').split(',');
+  // Esconde controles
+  const toHide=['filter-bar','sector-nav','view-entrada'];
+  toHide.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  // Esconde botões de nav que não sejam leitura
+  document.querySelectorAll('.main-nav-btn').forEach(b=>b.style.display='none');
+  // Esconde share btn
+  const sb=document.getElementById('btn-share');if(sb)sb.style.display='none';
+  // Adiciona banner read-only
+  const banner=document.createElement('div');
+  banner.style.cssText='background:#fffbeb;border-bottom:1px solid #fde68a;padding:8px 24px;font-size:11px;color:#92400e;text-align:center';
+  banner.innerHTML=`📊 Visualização WFS — <strong>${MESES_LABEL[mes-1]}/${ano}</strong> — Somente leitura`;
+  document.body.insertBefore(banner,document.getElementById('filter-bar'));
+  // Define filtros
+  currentAno=ano;currentMes=mes;currentView='acumulado';
+  // Cria tabs dinâmicas apenas com os setores permitidos
+  const tabsEl=document.createElement('div');
+  tabsEl.className='sector-nav';tabsEl.style.display='flex';
+  const nomeMap={internacao:'Internação',nacional:'Carga Nacional',exportacao:'Exportação',importacao:'Importação',sla:'SLA PCGs',raiox:'Raio-X',auditoria:'Auditoria 6S'};
+  setores.forEach((s,i)=>{
+    const btn=document.createElement('button');
+    btn.className='sector-tab'+(i===0?' active':'');
+    btn.textContent=nomeMap[s]||s;
+    btn.onclick=()=>{
+      currentSector=s;
+      document.querySelectorAll('.sector-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.content').forEach(c=>c.style.display='none');
+      const sec=document.getElementById('sec-'+s);if(sec)sec.style.display='block';
+      renderCurrentSector();
+    };
+    tabsEl.appendChild(btn);
+  });
+  document.getElementById('sector-nav').insertAdjacentElement('afterend',tabsEl);
+  // Mostra primeiro setor
+  currentSector=setores[0]||'internacao';
+  document.querySelectorAll('.content').forEach(c=>c.style.display='none');
+  const first=document.getElementById('sec-'+currentSector);if(first)first.style.display='block';
+  return true;
+}
+
+// ============================================================
 // INIT
 // ============================================================
 async function init(){
+  const isView=checkViewMode();
   await loadFromSupabase();
-  updateDashMonthSelect();
-  updateFormMonthHighlights();
+  if(!isView){
+    updateDashMonthSelect();
+    updateFormMonthHighlights();
+    document.getElementById('btn-share').style.display='flex';
+  }
   updatePeriodoInfo();
-  renderInternacao();
+  renderCurrentSector();
   updateSubsetor();
 }
 init();
