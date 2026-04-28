@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WFS Dashboard — Movimentação de Cargas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a}
+  :root{--red:#e11d48;--dark:#0f172a;--slate:#64748b;--border:#e2e8f0;--bg:#f8fafc;--white:#fff}
+  .header{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-img{height:32px;width:auto;object-fit:contain}
+  .logo-divider{width:1px;height:24px;background:var(--border)}
+  .logo-name{font-size:14px;font-weight:600;color:var(--dark)}
+  .logo-sub{font-size:11px;color:var(--slate)}
+  .main-nav{display:flex;gap:2px}
+  .main-nav-btn{padding:6px 16px;border-radius:8px;border:none;background:transparent;font-size:12px;font-weight:500;color:var(--slate);cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+  .main-nav-btn.active{background:var(--red);color:#fff}
+  .main-nav-btn:hover:not(.active){background:#f1f5f9;color:var(--dark)}
+  .filter-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .filter-group{display:flex;align-items:center;gap:8px}
+  .filter-label{font-size:11px;color:var(--slate);font-weight:500}
+  .filter-select{padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;color:var(--dark);background:var(--white);cursor:pointer;font-family:'Inter',sans-serif;font-weight:500}
+  .filter-select:focus{outline:none;border-color:var(--red)}
+  .view-toggle{display:flex;background:#f1f5f9;border-radius:8px;padding:2px;margin-left:auto}
+  .view-btn{padding:4px 12px;border-radius:6px;border:none;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;color:var(--slate);background:transparent;transition:all .15s}
+  .view-btn.active{background:var(--white);color:var(--dark);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .db-status{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--slate);padding:3px 8px;border-radius:20px;border:1px solid var(--border)}
+  .db-dot{width:6px;height:6px;border-radius:50%;background:#94a3b8;transition:.3s}
+  .db-dot.ok{background:#22c55e}
+  .db-dot.err{background:#e11d48}
+  .sector-nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0;overflow-x:auto}
+  .sector-tab{padding:10px 18px;border:none;border-bottom:2px solid transparent;background:transparent;font-size:12px;font-weight:500;color:var(--slate);cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .15s}
+  .sector-tab.active{color:var(--red);border-bottom-color:var(--red)}
+  .sector-tab:hover:not(.active){color:var(--dark);background:#f8fafc}
+  .content{padding:20px 24px;display:none}
+  .content.active{display:block}
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+  .kpi-card{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:14px 16px}
+  .kpi-label{font-size:10px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .kpi-val{font-size:20px;font-weight:700;color:var(--dark);line-height:1}
+  .kpi-delta{font-size:11px;font-weight:600;margin-top:4px}
+  .kpi-delta.pos{color:#15803d}
+  .kpi-delta.neg{color:#be123c}
+  .kpi-sub{font-size:10px;color:var(--slate);margin-top:2px}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .chart-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:18px}
+  .chart-card.full{grid-column:1/-1}
+  .chart-head{margin-bottom:10px}
+  .chart-title{font-size:12px;font-weight:600;color:var(--dark);margin-bottom:2px}
+  .chart-sub{font-size:10px;color:var(--slate)}
+  .legend{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+  .leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--slate)}
+  .leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+  .funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .funnel-bar-bg{flex:1;background:#f1f5f9;border-radius:4px;overflow:hidden;height:34px}
+  .funnel-bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 12px;transition:width .5s ease}
+  .funnel-bar-label{font-size:11px;font-weight:600;color:#fff;white-space:nowrap}
+  .funnel-meta{min-width:120px;text-align:right}
+  .funnel-meta-val{font-size:13px;font-weight:700;color:var(--dark)}
+  .funnel-meta-pct{font-size:10px;color:var(--slate)}
+  .funnel-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+  .card-filter{display:flex;align-items:center;gap:6px}
+  .card-filter-label{font-size:10px;color:var(--slate)}
+  .card-filter-select{padding:3px 8px;border-radius:5px;border:1px solid var(--border);font-size:11px;color:var(--dark);background:var(--white);font-family:'Inter',sans-serif;cursor:pointer}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .form-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px}
+  .form-card-title{font-size:12px;font-weight:600;color:var(--dark);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .form-card-title span{background:var(--red);color:#fff;font-size:10px;padding:2px 7px;border-radius:4px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .form-group{display:flex;flex-direction:column;gap:4px}
+  .form-group label{font-size:10px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.4px}
+  .form-group input{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--dark);font-family:'Inter',sans-serif;transition:.15s}
+  .form-group input:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(225,29,72,.08)}
+  .save-btn{background:var(--red);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:12px;transition:.15s}
+  .save-btn:hover{background:#be123c}
+  .save-btn:disabled{opacity:.5;cursor:not-allowed}
+  .success-msg{display:none;color:#15803d;font-size:11px;margin-top:8px;font-weight:500}
+  .error-msg{display:none;color:#be123c;font-size:11px;margin-top:8px;font-weight:500}
+  .loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+  .loading-overlay.show{display:flex}
+  .spinner{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#e11d48;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <span style="font-size:12px;color:#64748b">Carregando dados...</span>
+</div>
+
+<div class="header">
+  <div class="logo">
+    <img class="logo-img" src="https://lh3.googleusercontent.com/d/1sNzDKhdh2zH8d8DoyqIjx8l5LzBEXN5g" alt="WFS Logo" onerror="this.style.display='none'">
+    <div class="logo-divider"></div>
+    <div>
+      <div class="logo-name">Dashboard de Movimentação</div>
+      <div class="logo-sub">Worldflight Services</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="db-status"><div class="db-dot" id="db-dot"></div><span id="db-label">Conectando...</span></div>
+    <nav class="main-nav">
+      <button class="main-nav-btn active" onclick="switchMain('dashboard',this)">Gráficos</button>
+      <button class="main-nav-btn" onclick="switchMain('entrada',this)">Entrada de Dados</button>
+    </nav>
+  </div>
+</div>
+
+<div class="filter-bar" id="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Ano</span>
+    <select class="filter-select" id="sel-ano" onchange="applyFilters()">
+      <option value="2026">2026</option><option value="2025">2025</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Até o mês</span>
+    <select class="filter-select" id="sel-mes" onchange="applyFilters()">
+      <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
+      <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
+      <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
+      <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Visão</span>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btn-acum" onclick="setView('acumulado')">Acumulado</button>
+      <button class="view-btn" id="btn-men" onclick="setView('mensal')">Mensal</button>
+    </div>
+  </div>
+  <span id="periodo-info" style="font-size:11px;color:var(--slate);margin-left:4px"></span>
+</div>
+
+<div class="sector-nav" id="sector-nav">
+  <button class="sector-tab active" onclick="switchSector('internacao',this)">Internação</button>
+  <button class="sector-tab" onclick="switchSector('nacional',this)">Carga Nacional</button>
+  <button class="sector-tab" onclick="switchSector('exportacao',this)">Exportação</button>
+  <button class="sector-tab" onclick="switchSector('importacao',this)">Importação</button>
+  <button class="sector-tab" onclick="switchSector('sla',this)">SLA PCGs</button>
+  <button class="sector-tab" onclick="switchSector('raiox',this)">Raio-X</button>
+  <button class="sector-tab" onclick="switchSector('auditoria',this)">Auditoria 6S</button>
+</div>
+
+<!-- INTERNAÇÃO -->
+<div class="content active" id="sec-internacao">
+  <div class="kpi-row" id="kpi-internacao"></div>
+  <div class="charts-grid" id="grid-internacao">
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Peso Movimentado — Granel</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-int-g-peso" role="img" aria-label="Peso Granel"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Volume Movimentado — Granel</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-int-g-vol" role="img" aria-label="Volume Granel"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Peso Movimentado — Paletizada</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-int-p-peso" role="img" aria-label="Peso Paletizada"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Volume Movimentado — Paletizada</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-int-p-vol" role="img" aria-label="Volume Paletizada"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">ULDs — Paletizada</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-int-p-uld" role="img" aria-label="ULDs Paletizada"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Total Internação (Granel + Paletizada)</div><div class="chart-sub">Total acumulado comparativo</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-int-total" role="img" aria-label="Total Internação"></canvas></div></div>
+  </div>
+</div>
+
+<!-- NACIONAL -->
+<div class="content" id="sec-nacional">
+  <div class="kpi-row" id="kpi-nacional"></div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Peso Movimentado — Carga Nacional</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-nac-peso" role="img" aria-label="Peso Nacional"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Volume Movimentado — Carga Nacional</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-nac-vol" role="img" aria-label="Volume Nacional"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Distribuição de Voos — Nacional</div><div class="chart-sub">Quantidade de voos por mês</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-nac-voos" role="img" aria-label="Voos Nacional"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">ULDs — Carga Nacional</div><div class="chart-sub">Total de ULDs por mês</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-nac-uld" role="img" aria-label="ULDs Nacional"></canvas></div></div>
+  </div>
+</div>
+
+<!-- EXPORTAÇÃO -->
+<div class="content" id="sec-exportacao">
+  <div class="kpi-row" id="kpi-exportacao"></div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Peso Movimentado — Exportação</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-exp-peso" role="img" aria-label="Peso Exportação"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Volume Movimentado — Exportação</div><div class="chart-sub">Comparativo por período</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-exp-vol" role="img" aria-label="Volume Exportação"></canvas></div></div>
+    <div class="chart-card full"><div class="chart-head"><div class="chart-title">Total Exportação — Peso Acumulado</div><div class="chart-sub">Comparativo período selecionado</div></div><div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Ano anterior</span><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Ano atual</span></div><div style="position:relative;height:240px"><canvas id="c-exp-total" role="img" aria-label="Total Exportação"></canvas></div></div>
+  </div>
+</div>
+
+<!-- IMPORTAÇÃO -->
+<div class="content" id="sec-importacao">
+  <div class="kpi-row" id="kpi-importacao"></div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Peso Recebido por CIA</div><div class="chart-sub" id="imp-sub-peso">Importação — por companhia</div></div><div class="legend" id="imp-leg-peso"></div><div style="position:relative;height:240px"><canvas id="c-imp-peso" role="img" aria-label="Peso Importação"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">ULDs por CIA</div><div class="chart-sub" id="imp-sub-uld">Importação — por companhia</div></div><div class="legend" id="imp-leg-uld"></div><div style="position:relative;height:240px"><canvas id="c-imp-uld" role="img" aria-label="ULDs Importação"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Voos por CIA</div><div class="chart-sub" id="imp-sub-voos">Importação — por companhia</div></div><div class="legend" id="imp-leg-voos"></div><div style="position:relative;height:240px"><canvas id="c-imp-voos" role="img" aria-label="Voos Importação"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">TC4 por CIA</div><div class="chart-sub" id="imp-sub-tc4">Importação — por companhia</div></div><div class="legend" id="imp-leg-tc4"></div><div style="position:relative;height:240px"><canvas id="c-imp-tc4" role="img" aria-label="TC4 Importação"></canvas></div></div>
+  </div>
+</div>
+
+<!-- SLA PCGs -->
+<div class="content" id="sec-sla">
+  <div class="kpi-row" id="kpi-sla"></div>
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <div class="chart-head"><div class="chart-title">SLA PCGs — Evolução Mensal por Setor</div><div class="chart-sub">Valores mensais registrados — ano atual</div></div>
+      <div class="legend">
+        <span class="leg-item"><span class="leg-dot" style="background:#e11d48"></span>Internação</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Nacional</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#64748b"></span>Exportação</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#7c3aed"></span>Importação</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#059669"></span>Paletizada</span>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="c-sla-all" role="img" aria-label="SLA PCGs"></canvas></div>
+    </div>
+  </div>
+  <div style="margin-top:16px;padding:16px;background:var(--white);border-radius:10px;border:1px solid var(--border)">
+    <div style="font-size:11px;color:var(--slate);margin-bottom:12px;font-weight:600">DADOS SLA PCGs REGISTRADOS</div>
+    <div id="sla-table"></div>
+    <div style="font-size:10px;color:var(--slate);margin-top:10px">* Dados inseridos manualmente via aba "Entrada de Dados"</div>
+  </div>
+</div>
+
+<!-- RAIO-X -->
+<div class="content" id="sec-raiox">
+  <div class="kpi-row" id="kpi-raiox"></div>
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <div class="chart-head">
+        <div class="funnel-title-row">
+          <div><div class="chart-title">Inspeções Raio-X</div><div class="chart-sub">Presenças auditadas, inspecionadas e não inspecionadas</div></div>
+          <div class="card-filter">
+            <span class="card-filter-label">Mês isolado:</span>
+            <select class="card-filter-select" id="raiox-mes-iso" onchange="renderRaioX()"><option value="0">— Acumulado —</option></select>
+          </div>
+        </div>
+      </div>
+      <div id="raiox-funnel-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDITORIA 6S -->
+<div class="content" id="sec-auditoria">
+  <div class="kpi-row" id="kpi-auditoria"></div>
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <div class="chart-head">
+        <div class="funnel-title-row">
+          <div><div class="chart-title">Auditoria 6S — Resultado (%)</div><div class="chart-sub">Evolução mensal do resultado percentual</div></div>
+          <div class="card-filter">
+            <span class="card-filter-label">Mês isolado:</span>
+            <select class="card-filter-select" id="aud-mes-iso" onchange="renderAuditoria()"><option value="0">— Acumulado —</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="legend"><span class="leg-item"><span class="leg-dot" style="background:#0f172a"></span>Resultado %</span></div>
+      <div style="position:relative;height:300px"><canvas id="c-auditoria" role="img" aria-label="Auditoria 6S"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ENTRADA DE DADOS -->
+<div id="view-entrada" style="display:none;padding:20px 24px">
+  <div style="margin-bottom:16px;padding:12px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:11px;color:#92400e">
+    <strong>Meses com dados já inseridos</strong> aparecem destacados com <strong>●</strong> nos seletores abaixo. Dados salvos no Supabase — disponíveis em qualquer dispositivo.
+  </div>
+  <div class="form-grid">
+
+    <div class="form-card">
+      <div class="form-card-title"><span>1</span> SLA PCGs — Valores Mensais</div>
+      <div class="form-row">
+        <div class="filter-group"><span class="filter-label">Ano</span>
+          <select class="filter-select" id="form-ano" onchange="updateFormMonthHighlights()"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="filter-group"><span class="filter-label">Mês</span>
+          <select class="filter-select" id="form-mes"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Internação</label><input type="number" id="sla-internacao" placeholder="ex: 1200"></div>
+        <div class="form-group"><label>Paletizada</label><input type="number" id="sla-paletizada" placeholder="ex: 980"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Carga Nacional</label><input type="number" id="sla-nacional" placeholder="ex: 3500"></div>
+        <div class="form-group"><label>Exportação</label><input type="number" id="sla-exportacao" placeholder="ex: 450"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Importação</label><input type="number" id="sla-importacao" placeholder="ex: 800"></div>
+      </div>
+      <button class="save-btn" onclick="saveSLA()">Salvar SLA PCGs</button>
+      <div class="success-msg" id="msg-sla">✓ Salvo no Supabase!</div>
+      <div class="error-msg" id="err-sla">✗ Erro ao salvar. Verifique a conexão.</div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><span>2</span> Inspeções Raio-X</div>
+      <div class="form-row">
+        <div class="filter-group"><span class="filter-label">Ano</span>
+          <select class="filter-select" id="form-raiox-ano" onchange="updateFormMonthHighlights()"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="filter-group"><span class="filter-label">Mês</span>
+          <select class="filter-select" id="form-raiox-mes"></select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label>Qtd Presenças Auditados</label><input type="number" id="rx-auditados" placeholder="ex: 500"></div>
+      <div class="form-group" style="margin-bottom:10px"><label>Qtd Presenças Inspecionadas</label><input type="number" id="rx-inspecionados" placeholder="ex: 420"></div>
+      <div class="form-group" style="margin-bottom:10px"><label>Qtd Presenças Não Inspecionadas</label><input type="number" id="rx-nao-inspecionados" placeholder="ex: 80"></div>
+      <button class="save-btn" onclick="saveRaioX()">Salvar Raio-X</button>
+      <div class="success-msg" id="msg-raiox">✓ Salvo no Supabase!</div>
+      <div class="error-msg" id="err-raiox">✗ Erro ao salvar.</div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><span>3</span> Auditoria 6S</div>
+      <div class="form-row">
+        <div class="filter-group"><span class="filter-label">Ano</span>
+          <select class="filter-select" id="form-aud-ano" onchange="updateFormMonthHighlights()"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="filter-group"><span class="filter-label">Mês</span>
+          <select class="filter-select" id="form-aud-mes"></select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label>Resultado Auditoria (%)</label><input type="number" id="aud-resultado" placeholder="ex: 87.5" step="0.1" min="0" max="100"></div>
+      <button class="save-btn" onclick="saveAuditoria()">Salvar Auditoria 6S</button>
+      <div class="success-msg" id="msg-auditoria">✓ Salvo no Supabase!</div>
+      <div class="error-msg" id="err-auditoria">✗ Erro ao salvar.</div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><span>4</span> Movimentação — Dados Manuais</div>
+      <p style="font-size:11px;color:var(--slate);margin-bottom:12px">Dados históricos 2024–2026 já estão pré-carregados no sistema.</p>
+      <div class="form-row">
+        <div class="filter-group"><span class="filter-label">Ano</span>
+          <select class="filter-select" id="form-mov-ano"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="filter-group"><span class="filter-label">Mês</span>
+          <select class="filter-select" id="form-mov-mes">
+            <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
+            <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
+            <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
+            <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+          </select>
+        </div>
+      </div>
+      <div class="filter-group" style="margin-bottom:10px">
+        <span class="filter-label">Setor</span>
+        <select class="filter-select" id="form-mov-setor" onchange="updateSubsetor()">
+          <option value="GRANEL">Internação Granel</option>
+          <option value="PALETIZADA">Internação Paletizada</option>
+          <option value="NACIONAL">Carga Nacional</option>
+          <option value="EXPORTAÇÃO">Exportação</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="mov-peso" placeholder="ex: 1500000"></div>
+        <div class="form-group"><label>Volume</label><input type="number" id="mov-vol" placeholder="ex: 95000"></div>
+      </div>
+      <div class="form-row" id="mov-extras">
+        <div class="form-group"><label>Qtd Voos</label><input type="number" id="mov-voos" placeholder="ex: 640"></div>
+        <div class="form-group"><label>Qtd ULDs</label><input type="number" id="mov-ulds" placeholder="ex: 4100"></div>
+      </div>
+      <button class="save-btn" onclick="saveMovimentacao()">Salvar Movimentação</button>
+      <div class="success-msg" id="msg-mov">✓ Salvo!</div>
+      <div class="error-msg" id="err-mov">✗ Erro ao salvar.</div>
+    </div>
+
+    <div class="form-card" style="grid-column:1/-1">
+      <div class="form-card-title"><span>5</span> Importação — por Companhia</div>
+      <p style="font-size:11px;color:var(--slate);margin-bottom:14px">Insira os dados mensais de cada voo de importação. Você pode adicionar múltiplos voos por mês, um de cada vez.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="filter-group"><span class="filter-label">Ano</span>
+          <select class="filter-select" id="form-imp-ano" onchange="updateFormMonthHighlights()"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="filter-group"><span class="filter-label">Mês</span>
+          <select class="filter-select" id="form-imp-mes"></select>
+        </div>
+        <div class="filter-group"><span class="filter-label">Companhia</span>
+          <select class="filter-select" id="form-imp-cia">
+            <option value="ATLAS">Atlas</option><option value="LATAM">Latam</option><option value="TAMPA">Tampa</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- tabela de voos adicionados -->
+      <div id="imp-voos-lista" style="margin-bottom:14px"></div>
+
+      <!-- linha para adicionar um voo -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Adicionar Voo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+          <div class="form-group"><label>Peso (kg)</label><input type="number" id="imp-v-peso" placeholder="ex: 320000"></div>
+          <div class="form-group"><label>Volume</label><input type="number" id="imp-v-vol" placeholder="ex: 5000"></div>
+          <div class="form-group"><label>ULD</label><input type="number" id="imp-v-uld" placeholder="ex: 120"></div>
+          <div class="form-group"><label>TC4</label><input type="number" id="imp-v-tc4" placeholder="ex: 95"></div>
+          <div class="form-group"><label>N° Voo</label><input type="text" id="imp-v-num" placeholder="ex: GT1234"></div>
+          <div>
+            <button onclick="addImpVoo()" style="background:#0f172a;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">+ Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="save-btn" onclick="saveImportacao()" style="margin-top:0">Salvar Todos os Voos</button>
+        <button onclick="clearImpVoos()" style="background:transparent;border:1px solid #e2e8f0;color:#64748b;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif">Limpar lista</button>
+      </div>
+      <div class="success-msg" id="msg-imp">✓ Voos salvos no Supabase!</div>
+      <div class="error-msg" id="err-imp">✗ Erro ao salvar. Verifique a conexão.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SUPABASE CONFIG
+// ============================================================
+const SUPABASE_URL = 'https://teca-admin-supabase.ly7t0m.easypanel.host';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE';
+const SCHEMA = 'dash-sla';
+
+async function sbFetch(table, method='GET', body=null, params='') {
+  const url = `${SUPABASE_URL}/rest/v1/${table}${params}`;
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Accept-Profile': SCHEMA,
+      'Content-Profile': SCHEMA,
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`${res.status}: ${txt}`);
+  }
+  if (method === 'GET') return res.json();
+  return true;
+}
+
+// ============================================================
+// CONSTANTS & STATE
+// ============================================================
+const MESES_LABEL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+let currentAno = 2026, currentMes = 2, currentView = 'acumulado', currentSector = 'internacao';
+let chartInstances = {};
+
+// Cloud data (loaded from Supabase)
+let slaData = [];
+let raioxData = [];
+let auditoriaData = [];
+
+// Historical movimentação data (static — already complete)
+let movData = [
+  {ano:2024,mes:1,sub:'GRANEL',peso:1817213.10,vol:135730,voos:0,ulds:0},{ano:2024,mes:2,sub:'GRANEL',peso:1867441.54,vol:139406,voos:0,ulds:0},{ano:2024,mes:3,sub:'GRANEL',peso:2169198.26,vol:163215,voos:0,ulds:0},{ano:2024,mes:4,sub:'GRANEL',peso:2111566.01,vol:141747,voos:0,ulds:0},{ano:2024,mes:5,sub:'GRANEL',peso:1886704.46,vol:129976,voos:0,ulds:0},{ano:2024,mes:6,sub:'GRANEL',peso:2005315.64,vol:141423,voos:0,ulds:0},{ano:2024,mes:7,sub:'GRANEL',peso:1742557.30,vol:114174,voos:0,ulds:0},{ano:2024,mes:8,sub:'GRANEL',peso:2137631.36,vol:131952,voos:0,ulds:0},{ano:2024,mes:9,sub:'GRANEL',peso:2045832.00,vol:130485,voos:0,ulds:0},{ano:2024,mes:10,sub:'GRANEL',peso:2141893.54,vol:123308,voos:0,ulds:0},{ano:2024,mes:11,sub:'GRANEL',peso:2118342.66,vol:139355,voos:0,ulds:0},{ano:2024,mes:12,sub:'GRANEL',peso:1774340.97,vol:130900,voos:0,ulds:0},
+  {ano:2024,mes:1,sub:'PALETIZADA',peso:1577665.00,vol:160295,voos:0,ulds:952},{ano:2024,mes:2,sub:'PALETIZADA',peso:1862408.00,vol:188169,voos:0,ulds:1082},{ano:2024,mes:3,sub:'PALETIZADA',peso:2030717.00,vol:213366,voos:0,ulds:1204},{ano:2024,mes:4,sub:'PALETIZADA',peso:1707933.00,vol:175616,voos:0,ulds:985},{ano:2024,mes:5,sub:'PALETIZADA',peso:1914555.10,vol:171860,voos:0,ulds:1123},{ano:2024,mes:6,sub:'PALETIZADA',peso:1972783.00,vol:208899,voos:0,ulds:1137},{ano:2024,mes:7,sub:'PALETIZADA',peso:1892988.58,vol:200287,voos:0,ulds:1101},{ano:2024,mes:8,sub:'PALETIZADA',peso:1806170.00,vol:191413,voos:0,ulds:1035},{ano:2024,mes:9,sub:'PALETIZADA',peso:1963608.00,vol:204482,voos:0,ulds:1126},{ano:2024,mes:10,sub:'PALETIZADA',peso:2115975.00,vol:222891,voos:0,ulds:1150},{ano:2024,mes:11,sub:'PALETIZADA',peso:2031082.00,vol:249295,voos:0,ulds:1178},{ano:2024,mes:12,sub:'PALETIZADA',peso:1805394.70,vol:205932,voos:0,ulds:1082},
+  {ano:2024,mes:1,sub:'NACIONAL',peso:4211614.00,vol:3601,voos:615,ulds:3601},{ano:2024,mes:2,sub:'NACIONAL',peso:4561430.00,vol:3716,voos:607,ulds:3716},{ano:2024,mes:3,sub:'NACIONAL',peso:4946622.00,vol:4048,voos:659,ulds:4048},{ano:2024,mes:4,sub:'NACIONAL',peso:4911664.00,vol:3989,voos:669,ulds:3989},{ano:2024,mes:5,sub:'NACIONAL',peso:5460467.00,vol:4345,voos:698,ulds:4345},{ano:2024,mes:6,sub:'NACIONAL',peso:5117681.00,vol:4152,voos:671,ulds:4152},{ano:2024,mes:7,sub:'NACIONAL',peso:4872716.00,vol:4144,voos:686,ulds:4120},{ano:2024,mes:8,sub:'NACIONAL',peso:5135151.00,vol:4228,voos:683,ulds:4221},{ano:2024,mes:9,sub:'NACIONAL',peso:5044528.00,vol:4101,voos:661,ulds:4134},{ano:2024,mes:10,sub:'NACIONAL',peso:5530443.00,vol:4491,voos:700,ulds:4464},{ano:2024,mes:11,sub:'NACIONAL',peso:6238186.00,vol:4773,voos:658,ulds:4904},{ano:2024,mes:12,sub:'NACIONAL',peso:6031564.00,vol:4800,voos:672,ulds:4650},
+  {ano:2024,mes:1,sub:'EXPORTAÇÃO',peso:135496.50,vol:2526,voos:0,ulds:0},{ano:2024,mes:2,sub:'EXPORTAÇÃO',peso:227595.70,vol:3638,voos:0,ulds:0},{ano:2024,mes:3,sub:'EXPORTAÇÃO',peso:262870.20,vol:1833,voos:0,ulds:0},{ano:2024,mes:4,sub:'EXPORTAÇÃO',peso:91439.54,vol:1233,voos:0,ulds:0},{ano:2024,mes:5,sub:'EXPORTAÇÃO',peso:96091.95,vol:1191,voos:0,ulds:0},{ano:2024,mes:6,sub:'EXPORTAÇÃO',peso:138988.15,vol:1418,voos:0,ulds:0},{ano:2024,mes:7,sub:'EXPORTAÇÃO',peso:129468.79,vol:1343,voos:0,ulds:0},{ano:2024,mes:8,sub:'EXPORTAÇÃO',peso:135938.00,vol:1432,voos:0,ulds:0},{ano:2024,mes:9,sub:'EXPORTAÇÃO',peso:207333.10,vol:1240,voos:0,ulds:0},{ano:2024,mes:10,sub:'EXPORTAÇÃO',peso:73375.90,vol:1336,voos:0,ulds:0},{ano:2024,mes:11,sub:'EXPORTAÇÃO',peso:148329.82,vol:1168,voos:0,ulds:0},{ano:2024,mes:12,sub:'EXPORTAÇÃO',peso:183371.42,vol:1339,voos:0,ulds:0},
+  {ano:2025,mes:1,sub:'GRANEL',peso:2077745.07,vol:105709,voos:0,ulds:0},{ano:2025,mes:2,sub:'GRANEL',peso:1699457.83,vol:90932,voos:0,ulds:0},{ano:2025,mes:3,sub:'GRANEL',peso:1556520.51,vol:81552,voos:0,ulds:0},{ano:2025,mes:4,sub:'GRANEL',peso:1599008.90,vol:96213,voos:0,ulds:0},{ano:2025,mes:5,sub:'GRANEL',peso:1672106.25,vol:94461,voos:0,ulds:0},{ano:2025,mes:6,sub:'GRANEL',peso:1604502.70,vol:91823,voos:0,ulds:0},{ano:2025,mes:7,sub:'GRANEL',peso:1548766.60,vol:102972,voos:0,ulds:0},{ano:2025,mes:8,sub:'GRANEL',peso:1451072.87,vol:87609,voos:0,ulds:0},{ano:2025,mes:9,sub:'GRANEL',peso:1494333.74,vol:85738,voos:0,ulds:0},{ano:2025,mes:10,sub:'GRANEL',peso:1653588.72,vol:102798,voos:0,ulds:0},{ano:2025,mes:11,sub:'GRANEL',peso:1507713.13,vol:93494,voos:0,ulds:0},{ano:2025,mes:12,sub:'GRANEL',peso:1367096.86,vol:84835,voos:0,ulds:0},
+  {ano:2025,mes:1,sub:'PALETIZADA',peso:1380737.77,vol:162978,voos:0,ulds:829},{ano:2025,mes:2,sub:'PALETIZADA',peso:2250159.00,vol:256732,voos:0,ulds:1016},{ano:2025,mes:3,sub:'PALETIZADA',peso:1814980.00,vol:199505,voos:0,ulds:1096},{ano:2025,mes:4,sub:'PALETIZADA',peso:1594179.00,vol:171023,voos:0,ulds:923},{ano:2025,mes:5,sub:'PALETIZADA',peso:1802084.00,vol:200801,voos:0,ulds:1030},{ano:2025,mes:6,sub:'PALETIZADA',peso:1777855.00,vol:192587,voos:0,ulds:1020},{ano:2025,mes:7,sub:'PALETIZADA',peso:1688080.00,vol:189819,voos:0,ulds:1017},{ano:2025,mes:8,sub:'PALETIZADA',peso:1629518.00,vol:185489,voos:0,ulds:978},{ano:2025,mes:9,sub:'PALETIZADA',peso:1957935.90,vol:212727,voos:0,ulds:1171},{ano:2025,mes:10,sub:'PALETIZADA',peso:2317729.00,vol:253970,voos:0,ulds:1090},{ano:2025,mes:11,sub:'PALETIZADA',peso:2199112.00,vol:245938,voos:0,ulds:1322},{ano:2025,mes:12,sub:'PALETIZADA',peso:1957935.90,vol:212727,voos:0,ulds:1271},
+  {ano:2025,mes:1,sub:'NACIONAL',peso:4545107.00,vol:3929,voos:647,ulds:3669},{ano:2025,mes:2,sub:'NACIONAL',peso:4844386.60,vol:4052,voos:616,ulds:3846},{ano:2025,mes:3,sub:'NACIONAL',peso:5183110.00,vol:4270,voos:642,ulds:4101},{ano:2025,mes:4,sub:'NACIONAL',peso:5069110.00,vol:4221,voos:640,ulds:4084},{ano:2025,mes:5,sub:'NACIONAL',peso:5791226.00,vol:4811,voos:689,ulds:4584},{ano:2025,mes:6,sub:'NACIONAL',peso:4912599.00,vol:4256,voos:657,ulds:4075},{ano:2025,mes:7,sub:'NACIONAL',peso:5644775.00,vol:4896,voos:685,ulds:4672},{ano:2025,mes:8,sub:'NACIONAL',peso:5784044.00,vol:5076,voos:727,ulds:4835},{ano:2025,mes:9,sub:'NACIONAL',peso:5591156.00,vol:4912,voos:697,ulds:4689},{ano:2025,mes:10,sub:'NACIONAL',peso:6337320.00,vol:5476,voos:731,ulds:5267},{ano:2025,mes:11,sub:'NACIONAL',peso:6474624.00,vol:5411,voos:687,ulds:5365},{ano:2025,mes:12,sub:'NACIONAL',peso:6299565.00,vol:5250,voos:688,ulds:5073},
+  {ano:2025,mes:1,sub:'EXPORTAÇÃO',peso:82223.35,vol:1284,voos:0,ulds:0},{ano:2025,mes:2,sub:'EXPORTAÇÃO',peso:150424.50,vol:1399,voos:0,ulds:0},{ano:2025,mes:3,sub:'EXPORTAÇÃO',peso:88231.53,vol:1076,voos:0,ulds:0},{ano:2025,mes:4,sub:'EXPORTAÇÃO',peso:133771.50,vol:1405,voos:0,ulds:0},{ano:2025,mes:5,sub:'EXPORTAÇÃO',peso:134761.80,vol:1388,voos:0,ulds:0},{ano:2025,mes:6,sub:'EXPORTAÇÃO',peso:141307.60,vol:1367,voos:0,ulds:0},{ano:2025,mes:7,sub:'EXPORTAÇÃO',peso:259302.70,vol:1856,voos:0,ulds:0},{ano:2025,mes:8,sub:'EXPORTAÇÃO',peso:170262.13,vol:1492,voos:0,ulds:0},{ano:2025,mes:9,sub:'EXPORTAÇÃO',peso:166938.21,vol:1525,voos:0,ulds:0},{ano:2025,mes:10,sub:'EXPORTAÇÃO',peso:192351.00,vol:1546,voos:0,ulds:0},{ano:2025,mes:11,sub:'EXPORTAÇÃO',peso:130751.00,vol:1427,voos:0,ulds:0},{ano:2025,mes:12,sub:'EXPORTAÇÃO',peso:130154.85,vol:1175,voos:0,ulds:0},
+  {ano:2026,mes:1,sub:'GRANEL',peso:1252731.95,vol:63542,voos:0,ulds:0},{ano:2026,mes:2,sub:'GRANEL',peso:1420086.95,vol:82487,voos:0,ulds:0},
+  {ano:2026,mes:1,sub:'PALETIZADA',peso:1388169.00,vol:153610,voos:0,ulds:864},{ano:2026,mes:2,sub:'PALETIZADA',peso:1828019.00,vol:203140,voos:0,ulds:1076},
+  {ano:2026,mes:1,sub:'NACIONAL',peso:4767232.00,vol:4125,voos:667,ulds:4125},{ano:2026,mes:2,sub:'NACIONAL',peso:4753028.00,vol:4041,voos:612,ulds:4041},
+  {ano:2026,mes:1,sub:'EXPORTAÇÃO',peso:176273.07,vol:1198,voos:0,ulds:0},{ano:2026,mes:2,sub:'EXPORTAÇÃO',peso:101472.10,vol:1070,voos:0,ulds:0},
+];
+
+let impData = [
+  {ano:2025,mes:1,cia:'ATLAS',uld:728,tc4:605,peso:1396059.39,vol:23462,voos:20},{ano:2025,mes:2,cia:'ATLAS',uld:634,tc4:640,peso:1334708.09,vol:20977,voos:17},{ano:2025,mes:3,cia:'ATLAS',uld:557,tc4:533,peso:1096145.66,vol:20122,voos:16},{ano:2025,mes:4,cia:'ATLAS',uld:650,tc4:553,peso:1218930.76,vol:19269,voos:19},{ano:2025,mes:5,cia:'ATLAS',uld:599,tc4:638,peso:1131742.77,vol:18486,voos:17},{ano:2025,mes:6,cia:'ATLAS',uld:505,tc4:636,peso:865175.05,vol:16345,voos:16},{ano:2025,mes:7,cia:'ATLAS',uld:555,tc4:782,peso:1022360.64,vol:21700,voos:18},{ano:2025,mes:8,cia:'ATLAS',uld:579,tc4:661,peso:1112090.46,vol:20292,voos:17},{ano:2025,mes:9,cia:'ATLAS',uld:581,tc4:607,peso:1127547.11,vol:19187,voos:17},{ano:2025,mes:10,cia:'ATLAS',uld:706,tc4:595,peso:1307911.39,vol:18838,voos:20},{ano:2025,mes:11,cia:'ATLAS',uld:581,tc4:491,peso:1097373.03,vol:17001,voos:15},{ano:2025,mes:12,cia:'ATLAS',uld:408,tc4:448,peso:732264.15,vol:14274,voos:14},
+  {ano:2025,mes:1,cia:'LATAM',uld:536,tc4:341,peso:662512.80,vol:15290,voos:21},{ano:2025,mes:2,cia:'LATAM',uld:454,tc4:291,peso:639673.65,vol:13579,voos:17},{ano:2025,mes:3,cia:'LATAM',uld:470,tc4:343,peso:642450.78,vol:14959,voos:19},{ano:2025,mes:4,cia:'LATAM',uld:434,tc4:277,peso:564514.69,vol:14494,voos:18},{ano:2025,mes:5,cia:'LATAM',uld:549,tc4:389,peso:695494.49,vol:15878,voos:23},{ano:2025,mes:6,cia:'LATAM',uld:367,tc4:301,peso:447074.73,vol:9484,voos:19},{ano:2025,mes:7,cia:'LATAM',uld:327,tc4:247,peso:399638.12,vol:9214,voos:16},{ano:2025,mes:8,cia:'LATAM',uld:442,tc4:346,peso:521779.00,vol:11163,voos:16},{ano:2025,mes:9,cia:'LATAM',uld:299,tc4:227,peso:382332.59,vol:8243,voos:14},{ano:2025,mes:10,cia:'LATAM',uld:375,tc4:211,peso:530599.78,vol:10154,voos:13},{ano:2025,mes:11,cia:'LATAM',uld:345,tc4:255,peso:475925.52,vol:9337,voos:13},{ano:2025,mes:12,cia:'LATAM',uld:308,tc4:183,peso:457775.25,vol:7772,voos:14},
+  {ano:2025,mes:1,cia:'TAMPA',uld:444,tc4:359,peso:806641.05,vol:10748,voos:15},{ano:2025,mes:2,cia:'TAMPA',uld:347,tc4:262,peso:649658.88,vol:7642,voos:12},{ano:2025,mes:3,cia:'TAMPA',uld:268,tc4:219,peso:502571.46,vol:7691,voos:10},{ano:2025,mes:4,cia:'TAMPA',uld:374,tc4:357,peso:622363.34,vol:11449,voos:13},{ano:2025,mes:5,cia:'TAMPA',uld:365,tc4:375,peso:623450.11,vol:8083,voos:12},{ano:2025,mes:6,cia:'TAMPA',uld:249,tc4:320,peso:365740.59,vol:5663,voos:9},{ano:2025,mes:7,cia:'TAMPA',uld:342,tc4:368,peso:598076.32,vol:7568,voos:12},{ano:2025,mes:8,cia:'TAMPA',uld:418,tc4:367,peso:747409.12,vol:11848,voos:15},{ano:2025,mes:9,cia:'TAMPA',uld:425,tc4:413,peso:714584.23,vol:14146,voos:15},{ano:2025,mes:10,cia:'TAMPA',uld:378,tc4:406,peso:613111.75,vol:10070,voos:12},{ano:2025,mes:11,cia:'TAMPA',uld:399,tc4:470,peso:664530.36,vol:10473,voos:13},{ano:2025,mes:12,cia:'TAMPA',uld:334,tc4:405,peso:530677.62,vol:9511,voos:14},
+  {ano:2026,mes:1,cia:'ATLAS',uld:603,tc4:562,peso:1160733.91,vol:18813,voos:18},{ano:2026,mes:2,cia:'ATLAS',uld:416,tc4:514,peso:827987.13,vol:14707,voos:12},
+  {ano:2026,mes:1,cia:'LATAM',uld:432,tc4:285,peso:811117.55,vol:13261,voos:17},{ano:2026,mes:2,cia:'LATAM',uld:286,tc4:192,peso:368113.23,vol:9797,voos:10},
+  {ano:2026,mes:1,cia:'TAMPA',uld:485,tc4:567,peso:754549.02,vol:14629,voos:16},{ano:2026,mes:2,cia:'TAMPA',uld:406,tc4:491,peso:664736.11,vol:11318,voos:13},
+];
+
+// ============================================================
+// SUPABASE LOAD / STATUS
+// ============================================================
+async function loadFromSupabase() {
+  const overlay = document.getElementById('loading-overlay');
+  overlay.classList.add('show');
+  try {
+    const [slaRes, rxRes, audRes] = await Promise.all([
+      sbFetch('sla_pcg', 'GET', null, '?select=*&order=ano,mes'),
+      sbFetch('raiox', 'GET', null, '?select=*&order=ano,mes'),
+      sbFetch('auditoria_6s', 'GET', null, '?select=*&order=ano,mes'),
+    ]);
+    slaData = slaRes || [];
+    raioxData = rxRes || [];
+    auditoriaData = audRes || [];
+    setDbStatus(true);
+  } catch(e) {
+    console.error('Supabase load error:', e);
+    setDbStatus(false);
+  } finally {
+    overlay.classList.remove('show');
+  }
+}
+
+function setDbStatus(ok) {
+  document.getElementById('db-dot').className = 'db-dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('db-label').textContent = ok ? 'Supabase OK' : 'Sem conexão';
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmt(n){if(n===null||n===undefined||isNaN(n))return'—';return new Intl.NumberFormat('pt-BR').format(Math.round(n));}
+function fmtM(n){if(!n)return'—';return(n/1000000).toFixed(2).replace('.',',')+'M';}
+function delta(a,b){if(!b||b===0)return null;return((a-b)/b)*100;}
+function deltaStr(d){if(d===null)return'';return(d>=0?'+':'')+d.toFixed(2).replace('.',',')+'%';}
+function getMeses(m){return Array.from({length:m},(_,i)=>i+1);}
+function hasMovData(ano,mes){return movData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasImpData(ano,mes){return impData.some(d=>d.ano===ano&&d.mes===mes);}
+function maxMesComDados(ano){const r=movData.filter(d=>d.ano===ano);return r.length?Math.max(...r.map(d=>d.mes)):0;}
+function getAcum(sub,ano,ate){const ms=getMeses(ate);const r=movData.filter(d=>d.sub===sub&&d.ano===ano&&ms.includes(d.mes));return{peso:r.reduce((s,x)=>s+x.peso,0),vol:r.reduce((s,x)=>s+x.vol,0),voos:r.reduce((s,x)=>s+x.voos,0),ulds:r.reduce((s,x)=>s+x.ulds,0)};}
+function getMensal(sub,ano,mes){const r=movData.find(d=>d.sub===sub&&d.ano===ano&&d.mes===mes);return r||{peso:0,vol:0,voos:0,ulds:0};}
+function getImpAcum(cia,ano,ate){const ms=getMeses(ate);const r=impData.filter(d=>d.cia===cia&&d.ano===ano&&ms.includes(d.mes));return{peso:r.reduce((s,x)=>s+x.peso,0),vol:r.reduce((s,x)=>s+x.vol,0),voos:r.reduce((s,x)=>s+x.voos,0),ulds:r.reduce((s,x)=>s+(x.uld||0),0),tc4:r.reduce((s,x)=>s+x.tc4,0)};}
+function getImpMensal(cia,ano,mes){const r=impData.find(d=>d.cia===cia&&d.ano===ano&&d.mes===mes);return r?{...r,ulds:r.uld||0}:{peso:0,vol:0,voos:0,ulds:0,tc4:0};}
+
+function showNoData(id,ano,mes){
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML=`<div style="grid-column:1/-1"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;text-align:center"><div style="font-size:32px;margin-bottom:12px;opacity:.3">📊</div><p style="font-size:14px;font-weight:600;color:#64748b;margin-bottom:6px">Sem dados para o período selecionado</p><span style="font-size:12px;color:#94a3b8">Não há registros para <strong>${MESES_LABEL[mes-1]}/${ano}</strong> no ano atual.</span><span style="font-size:11px;color:#94a3b8;margin-top:4px">Selecione outro período ou adicione via "Entrada de Dados".</span></div></div>`;
+}
+
+function renderKPI(id,items){
+  const el=document.getElementById(id);if(!el)return;
+  if(!items.length){el.innerHTML='';return;}
+  el.innerHTML=items.map(k=>`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-val">${k.val}</div>${k.delta!=null?`<div class="kpi-delta ${k.delta>=0?'pos':'neg'}">${deltaStr(k.delta)}</div>`:''}<div class="kpi-sub">${k.sub||''}</div></div>`).join('');
+}
+
+// ============================================================
+// CHART FACTORIES
+// ============================================================
+const inlinePlugin = {
+  id:'inlineLabels',
+  afterDatasetsDraw(chart){
+    const {ctx:c,data}=chart;
+    data.datasets.forEach((_,di)=>{
+      const meta=chart.getDatasetMeta(di);
+      meta.data.forEach((bar,i)=>{
+        const v=data.datasets[di].data[i];
+        if(!v)return;
+        // Calcular altura da barra para centralizar verticalmente
+        const barHeight = bar.base - bar.y;
+        if(barHeight < 16) return; // barra muito pequena, não cabe label
+        const lbl=v>=1000000?(v/1000000).toFixed(2).replace('.',',')+'M':v>=1000?(v/1000).toFixed(1)+'k':String(Math.round(v));
+        c.save();
+        c.font='600 12px Inter';
+        c.fillStyle='#fff';
+        c.textAlign='center';
+        c.textBaseline='middle';
+        // Centro vertical da barra
+        const centerY = bar.y + barHeight / 2;
+        c.fillText(lbl, bar.x, centerY);
+        c.restore();
+      });
+    });
+  }
+};
+
+function makeBarCompare(id,labels,ant,atual){
+  if(chartInstances[id])chartInstances[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  const deltas=atual.map((v,i)=>ant[i]?delta(v,ant[i]):null);
+  chartInstances[id]=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Anterior',data:ant,backgroundColor:'#e11d48',borderRadius:4,borderSkipped:false},
+      {label:'Atual',data:atual,backgroundColor:'#0f172a',borderRadius:4,borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+      scales:{x:{ticks:{font:{family:'Inter',size:10},color:'#64748b',autoSkip:false,maxRotation:0},grid:{display:false},border:{color:'#e2e8f0'}},y:{ticks:{font:{family:'Inter',size:10},color:'#64748b',callback:v=>v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'#f1f5f9'},border:{display:false}}}},
+    plugins:[inlinePlugin,{id:'deltaLbls',afterDatasetsDraw(chart){
+      const {ctx:c}=chart;
+      chart.getDatasetMeta(1).data.forEach((bar,i)=>{
+        const d=deltas[i];if(d===null)return;
+        c.save();c.font='600 10px Inter';c.fillStyle=d>=0?'#15803d':'#be123c';c.textAlign='center';c.fillText(deltaStr(d),bar.x,bar.y-6);c.restore();
+      });
+    }}]
+  });
+}
+
+function makeTotalBar(id,aLabel,bLabel,aVal,bVal){
+  if(chartInstances[id])chartInstances[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  const d=delta(bVal,aVal);
+  chartInstances[id]=new Chart(ctx,{
+    type:'bar',
+    data:{labels:[aLabel,bLabel],datasets:[{data:[aVal,bVal],backgroundColor:['#e11d48','#0f172a'],borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+      scales:{x:{ticks:{font:{family:'Inter',size:11},color:'#64748b'},grid:{display:false},border:{color:'#e2e8f0'}},y:{ticks:{font:{family:'Inter',size:10},color:'#64748b',callback:v=>v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'#f1f5f9'},border:{display:false}}}},
+    plugins:[{id:'totalLbls',afterDatasetsDraw(chart){
+      const {ctx:c,data}=chart;
+      chart.getDatasetMeta(0).data.forEach((bar,i)=>{
+        const v=data.datasets[0].data[i];
+        const barH = bar.base - bar.y;
+        if(barH > 16){
+          c.save();c.font='600 13px Inter';c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+          c.fillText(v>=1000000?(v/1000000).toFixed(2).replace('.',',')+'M':fmt(v),bar.x,bar.y+barH/2);c.restore();
+        }
+        if(i===1&&d!==null){c.save();c.font='700 12px Inter';c.fillStyle=d>=0?'#15803d':'#be123c';c.textAlign='center';c.textBaseline='alphabetic';c.fillText(deltaStr(d),bar.x,bar.y-8);c.restore();}
+      });
+    }}]
+  });
+}
+
+// CIA grouped bar — with value labels inside bars
+function makeCIABar(id,labels,atlasD,latamD,tampaD){
+  if(chartInstances[id])chartInstances[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  chartInstances[id]=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Atlas',data:atlasD,backgroundColor:'#e11d48',borderRadius:4,borderSkipped:false},
+      {label:'Latam',data:latamD,backgroundColor:'#0f172a',borderRadius:4,borderSkipped:false},
+      {label:'Tampa',data:tampaD,backgroundColor:'#64748b',borderRadius:4,borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},
+      scales:{x:{ticks:{font:{family:'Inter',size:10},color:'#64748b',autoSkip:false,maxRotation:0},grid:{display:false},border:{color:'#e2e8f0'}},y:{ticks:{font:{family:'Inter',size:10},color:'#64748b',callback:v=>v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'#f1f5f9'},border:{display:false}}}},
+    plugins:[inlinePlugin]
+  });
+}
+
+function makeLineChart(id,labels,datasets){
+  if(chartInstances[id])chartInstances[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  chartInstances[id]=new Chart(ctx,{type:'line',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20,right:20}},plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{family:'Inter',size:10},color:'#64748b',autoSkip:false,maxRotation:0},grid:{display:false},border:{color:'#e2e8f0'}},y:{ticks:{font:{family:'Inter',size:10},color:'#64748b',callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'#f1f5f9'},border:{display:false}}}}
+  });
+}
+
+function makeLineChartWithLabels(id,labels,datasets){
+  if(chartInstances[id])chartInstances[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  chartInstances[id]=new Chart(ctx,{type:'line',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:28,right:24,left:8}},plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{family:'Inter',size:10},color:'#64748b',autoSkip:false,maxRotation:0},grid:{display:false},border:{color:'#e2e8f0'}},y:{min:0,max:100,ticks:{font:{family:'Inter',size:10},color:'#64748b',callback:v=>v+'%'},grid:{color:'#f1f5f9'},border:{display:false}}}},
+    plugins:[{id:'audLbls',afterDatasetsDraw(chart){
+      const {ctx:c}=chart;
+      chart.data.datasets.forEach((_,di)=>{
+        const meta=chart.getDatasetMeta(di);const ds=chart.data.datasets[di];
+        meta.data.forEach((pt,i)=>{
+          const v=ds.data[i];if(v===null||v===undefined)return;
+          c.save();c.font='600 10px Inter';c.fillStyle=ds.borderColor||'#0f172a';c.textAlign='center';
+          c.fillText(v%1===0?v+'%':v.toFixed(1)+'%',pt.x,Math.max(pt.y-10,14));c.restore();
+        });
+      });
+    }}]
+  });
+}
+
+// ============================================================
+// RENDER SECTORS
+// ============================================================
+function renderInternacao(){
+  const ano=currentAno,ant=ano-1,mes=currentMes;
+  if(!movData.some(d=>d.ano===ano&&d.mes<=mes)){showNoData('grid-internacao',ano,mes);return;}
+  const isA=currentView==='acumulado';
+  const ms=getMeses(mes),lbls=ms.map(m=>MESES_LABEL[m-1]);
+  const gA=isA?[getAcum('GRANEL',ant,mes)]:ms.map(m=>getMensal('GRANEL',ant,m));
+  const gB=isA?[getAcum('GRANEL',ano,mes)]:ms.map(m=>getMensal('GRANEL',ano,m));
+  const pA=isA?[getAcum('PALETIZADA',ant,mes)]:ms.map(m=>getMensal('PALETIZADA',ant,m));
+  const pB=isA?[getAcum('PALETIZADA',ano,mes)]:ms.map(m=>getMensal('PALETIZADA',ano,m));
+  const L=isA?[String(ant),String(ano)]:lbls;
+  if(isA){
+    makeTotalBar('c-int-g-peso',String(ant),String(ano),gA[0].peso,gB[0].peso);
+    makeTotalBar('c-int-g-vol',String(ant),String(ano),gA[0].vol,gB[0].vol);
+    makeTotalBar('c-int-p-peso',String(ant),String(ano),pA[0].peso,pB[0].peso);
+    makeTotalBar('c-int-p-vol',String(ant),String(ano),pA[0].vol,pB[0].vol);
+    makeTotalBar('c-int-p-uld',String(ant),String(ano),pA[0].ulds,pB[0].ulds);
+    makeTotalBar('c-int-total',String(ant),String(ano),gA[0].peso+pA[0].peso,gB[0].peso+pB[0].peso);
+    renderKPI('kpi-internacao',[
+      {label:'Granel — Peso',val:fmtM(gB[0].peso),delta:delta(gB[0].peso,gA[0].peso),sub:`vs ${ant}`},
+      {label:'Granel — Volume',val:fmt(gB[0].vol),delta:delta(gB[0].vol,gA[0].vol),sub:`vs ${ant}`},
+      {label:'Paletizada — Peso',val:fmtM(pB[0].peso),delta:delta(pB[0].peso,pA[0].peso),sub:`vs ${ant}`},
+      {label:'Paletizada — ULDs',val:fmt(pB[0].ulds),delta:delta(pB[0].ulds,pA[0].ulds),sub:`vs ${ant}`},
+      {label:'Total Internação',val:fmtM(gB[0].peso+pB[0].peso),delta:delta(gB[0].peso+pB[0].peso,gA[0].peso+pA[0].peso),sub:`vs ${ant}`},
+    ]);
+  } else {
+    makeBarCompare('c-int-g-peso',L,gA.map(r=>r.peso),gB.map(r=>r.peso));
+    makeBarCompare('c-int-g-vol',L,gA.map(r=>r.vol),gB.map(r=>r.vol));
+    makeBarCompare('c-int-p-peso',L,pA.map(r=>r.peso),pB.map(r=>r.peso));
+    makeBarCompare('c-int-p-vol',L,pA.map(r=>r.vol),pB.map(r=>r.vol));
+    makeBarCompare('c-int-p-uld',L,pA.map(r=>r.ulds),pB.map(r=>r.ulds));
+    makeBarCompare('c-int-total',L,gA.map((r,i)=>r.peso+pA[i].peso),gB.map((r,i)=>r.peso+pB[i].peso));
+    renderKPI('kpi-internacao',[]);
+  }
+}
+
+function renderNacional(){
+  const ano=currentAno,ant=ano-1,mes=currentMes;
+  if(!movData.some(d=>d.sub==='NACIONAL'&&d.ano===ano&&d.mes<=mes)){
+    const sec=document.getElementById('sec-nacional');
+    sec.innerHTML=`<div class="kpi-row" id="kpi-nacional"></div><div class="charts-grid" id="nd-nac"></div>`;
+    showNoData('nd-nac',ano,mes);return;
+  }
+  const isA=currentView==='acumulado';
+  const ms=getMeses(mes),lbls=ms.map(m=>MESES_LABEL[m-1]);
+  const nA=isA?[getAcum('NACIONAL',ant,mes)]:ms.map(m=>getMensal('NACIONAL',ant,m));
+  const nB=isA?[getAcum('NACIONAL',ano,mes)]:ms.map(m=>getMensal('NACIONAL',ano,m));
+  const L=isA?[String(ant),String(ano)]:lbls;
+  if(isA){
+    makeTotalBar('c-nac-peso',String(ant),String(ano),nA[0].peso,nB[0].peso);
+    makeTotalBar('c-nac-vol',String(ant),String(ano),nA[0].vol,nB[0].vol);
+    makeTotalBar('c-nac-voos',String(ant),String(ano),nA[0].voos,nB[0].voos);
+    makeTotalBar('c-nac-uld',String(ant),String(ano),nA[0].ulds,nB[0].ulds);
+    renderKPI('kpi-nacional',[
+      {label:'Peso Acumulado',val:fmtM(nB[0].peso),delta:delta(nB[0].peso,nA[0].peso),sub:`vs ${ant}`},
+      {label:'Volume',val:fmt(nB[0].vol),delta:delta(nB[0].vol,nA[0].vol),sub:`vs ${ant}`},
+      {label:'Voos',val:fmt(nB[0].voos),delta:delta(nB[0].voos,nA[0].voos),sub:`vs ${ant}`},
+      {label:'ULDs',val:fmt(nB[0].ulds),delta:delta(nB[0].ulds,nA[0].ulds),sub:`vs ${ant}`},
+    ]);
+  } else {
+    makeBarCompare('c-nac-peso',L,nA.map(r=>r.peso),nB.map(r=>r.peso));
+    makeBarCompare('c-nac-vol',L,nA.map(r=>r.vol),nB.map(r=>r.vol));
+    makeBarCompare('c-nac-voos',L,nA.map(r=>r.voos),nB.map(r=>r.voos));
+    makeBarCompare('c-nac-uld',L,nA.map(r=>r.ulds),nB.map(r=>r.ulds));
+    renderKPI('kpi-nacional',[]);
+  }
+}
+
+function renderExportacao(){
+  const ano=currentAno,ant=ano-1,mes=currentMes;
+  if(!movData.some(d=>d.sub==='EXPORTAÇÃO'&&d.ano===ano&&d.mes<=mes)){
+    const sec=document.getElementById('sec-exportacao');
+    sec.innerHTML=`<div class="kpi-row" id="kpi-exportacao"></div><div class="charts-grid" id="nd-exp"></div>`;
+    showNoData('nd-exp',ano,mes);return;
+  }
+  const isA=currentView==='acumulado';
+  const ms=getMeses(mes),lbls=ms.map(m=>MESES_LABEL[m-1]);
+  const eA=isA?[getAcum('EXPORTAÇÃO',ant,mes)]:ms.map(m=>getMensal('EXPORTAÇÃO',ant,m));
+  const eB=isA?[getAcum('EXPORTAÇÃO',ano,mes)]:ms.map(m=>getMensal('EXPORTAÇÃO',ano,m));
+  const L=isA?[String(ant),String(ano)]:lbls;
+  if(isA){
+    makeTotalBar('c-exp-peso',String(ant),String(ano),eA[0].peso,eB[0].peso);
+    makeTotalBar('c-exp-vol',String(ant),String(ano),eA[0].vol,eB[0].vol);
+    makeTotalBar('c-exp-total',String(ant),String(ano),eA[0].peso,eB[0].peso);
+    renderKPI('kpi-exportacao',[
+      {label:'Peso Acumulado',val:fmt(eB[0].peso),delta:delta(eB[0].peso,eA[0].peso),sub:`vs ${ant}`},
+      {label:'Volume',val:fmt(eB[0].vol),delta:delta(eB[0].vol,eA[0].vol),sub:`vs ${ant}`},
+    ]);
+  } else {
+    makeBarCompare('c-exp-peso',L,eA.map(r=>r.peso),eB.map(r=>r.peso));
+    makeBarCompare('c-exp-vol',L,eA.map(r=>r.vol),eB.map(r=>r.vol));
+    makeBarCompare('c-exp-total',L,eA.map(r=>r.peso),eB.map(r=>r.peso));
+    renderKPI('kpi-exportacao',[]);
+  }
+}
+
+function renderImportacao(){
+  const ano=currentAno,mes=currentMes;
+  if(!impData.some(d=>d.ano===ano&&d.mes<=mes)){
+    const sec=document.getElementById('sec-importacao');
+    sec.innerHTML=`<div class="kpi-row" id="kpi-importacao"></div><div class="charts-grid" id="nd-imp"></div>`;
+    showNoData('nd-imp',ano,mes);return;
+  }
+  const ms=getMeses(mes),lbls=ms.map(m=>MESES_LABEL[m-1]);
+  const legHTML=['#e11d48','#0f172a','#64748b'].map((c,i)=>`<span class="leg-item"><span class="leg-dot" style="background:${c}"></span>${['Atlas','Latam','Tampa'][i]}</span>`).join('');
+  ['imp-leg-peso','imp-leg-uld','imp-leg-voos','imp-leg-tc4'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=legHTML;});
+  const sub=`${ano} — Jan a ${MESES_LABEL[mes-1]}`;
+  ['imp-sub-peso','imp-sub-uld','imp-sub-voos','imp-sub-tc4'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=sub;});
+
+  const aP=ms.map(m=>getImpMensal('ATLAS',ano,m).peso);
+  const lP=ms.map(m=>getImpMensal('LATAM',ano,m).peso);
+  const tP=ms.map(m=>getImpMensal('TAMPA',ano,m).peso);
+  const aU=ms.map(m=>getImpMensal('ATLAS',ano,m).ulds);
+  const lU=ms.map(m=>getImpMensal('LATAM',ano,m).ulds);
+  const tU=ms.map(m=>getImpMensal('TAMPA',ano,m).ulds);
+  const aV=ms.map(m=>getImpMensal('ATLAS',ano,m).voos);
+  const lV=ms.map(m=>getImpMensal('LATAM',ano,m).voos);
+  const tV=ms.map(m=>getImpMensal('TAMPA',ano,m).voos);
+  const aT=ms.map(m=>getImpMensal('ATLAS',ano,m).tc4);
+  const lT=ms.map(m=>getImpMensal('LATAM',ano,m).tc4);
+  const tT=ms.map(m=>getImpMensal('TAMPA',ano,m).tc4);
+
+  makeCIABar('c-imp-peso',lbls,aP,lP,tP);
+  makeCIABar('c-imp-uld',lbls,aU,lU,tU);
+  makeCIABar('c-imp-voos',lbls,aV,lV,tV);
+  makeCIABar('c-imp-tc4',lbls,aT,lT,tT);
+
+  const totA=getImpAcum('ATLAS',ano,mes),totL=getImpAcum('LATAM',ano,mes),totT=getImpAcum('TAMPA',ano,mes);
+  renderKPI('kpi-importacao',[
+    {label:'Peso Total (todas CIAs)',val:fmtM(totA.peso+totL.peso+totT.peso),delta:null,sub:`${ano} acum.`},
+    {label:'ULDs Total',val:fmt(totA.ulds+totL.ulds+totT.ulds),delta:null,sub:''},
+    {label:'Atlas — Peso',val:fmtM(totA.peso),delta:null,sub:''},
+    {label:'Latam — Peso',val:fmtM(totL.peso),delta:null,sub:''},
+    {label:'Tampa — Peso',val:fmtM(totT.peso),delta:null,sub:''},
+  ]);
+}
+
+function renderSLA(){
+  const ano=currentAno,mes=currentMes;
+  const ms=getMeses(mes),lbls=ms.map(m=>MESES_LABEL[m-1]);
+  const setores=['internacao','paletizada','nacional','exportacao','importacao'];
+  const cores=['#e11d48','#0f172a','#64748b','#7c3aed','#059669'];
+  const nomes=['Internação','Paletizada','Nacional','Exportação','Importação'];
+  const datasets=setores.map((s,i)=>{
+    const data=ms.map(m=>{const r=slaData.find(d=>d.ano===ano&&d.mes===m&&d.setor===s);return r?r.valor:null;});
+    return{label:nomes[i],data,backgroundColor:cores[i]+'22',borderColor:cores[i],borderWidth:2,pointRadius:4,pointBackgroundColor:cores[i],tension:.3,fill:false,spanGaps:false};
+  });
+  makeLineChart('c-sla-all',lbls,datasets);
+  const tb=document.getElementById('sla-table');
+  if(tb){
+    const rows=ms.map(m=>{
+      const cells=setores.map(s=>{const r=slaData.find(d=>d.ano===ano&&d.mes===m&&d.setor===s);return`<td style="padding:4px 10px;text-align:right;font-size:11px">${r?fmt(r.valor):'—'}</td>`;}).join('');
+      return`<tr><td style="padding:4px 10px;font-size:11px;font-weight:500;color:#64748b">${MESES_LABEL[m-1]}</td>${cells}</tr>`;
+    }).join('');
+    tb.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid #e2e8f0"><th style="padding:4px 10px;text-align:left;font-size:10px;color:#64748b;font-weight:600">Mês</th>${nomes.map(n=>`<th style="padding:4px 10px;text-align:right;font-size:10px;color:#64748b;font-weight:600">${n}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  renderKPI('kpi-sla',[{label:'Dados manuais — Supabase',val:'SLA PCGs',delta:null,sub:`${ano} — até ${MESES_LABEL[mes-1]}`}]);
+}
+
+function buildRaioxMesSelect(){
+  const sel=document.getElementById('raiox-mes-iso');if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="0">— Acumulado —</option>';
+  getMeses(currentMes).forEach(m=>{
+    const hasD=raioxData.some(d=>d.ano===currentAno&&d.mes===m);
+    const opt=document.createElement('option');
+    opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');
+    if(hasD)opt.style.fontWeight='700';sel.appendChild(opt);
+  });
+  if(prev&&sel.querySelector(`option[value="${prev}"]`))sel.value=prev;else sel.value='0';
+}
+
+function renderRaioX(){
+  const ano=currentAno,mes=currentMes;
+  buildRaioxMesSelect();
+  const iso=parseInt(document.getElementById('raiox-mes-iso').value)||0;
+  let aud=0,insp=0,nao=0,lbl='';
+  if(iso===0){getMeses(mes).forEach(m=>{const r=raioxData.find(d=>d.ano===ano&&d.mes===m);if(r){aud+=r.auditados;insp+=r.inspecionados;nao+=r.nao_inspecionados;}});lbl=`Acumulado Jan–${MESES_LABEL[mes-1]}/${ano}`;}
+  else{const r=raioxData.find(d=>d.ano===ano&&d.mes===iso);if(r){aud=r.auditados;insp=r.inspecionados;nao=r.nao_inspecionados;}lbl=`${MESES_LABEL[iso-1]}/${ano}`;}
+  const pI=aud>0?((insp/aud)*100).toFixed(1):0;
+  const pN=aud>0?((nao/aud)*100).toFixed(1):0;
+  const wrap=document.getElementById('raiox-funnel-wrap');if(!wrap)return;
+  if(aud===0){wrap.innerHTML=`<div style="text-align:center;padding:40px;color:#94a3b8;font-size:12px">Nenhum dado de Raio-X inserido para este período.<br>Acesse "Entrada de Dados" para registrar.</div>`;renderKPI('kpi-raiox',[]);return;}
+  const rows=[{label:'Presenças Auditadas',val:aud,pct:'100%',color:'#0f172a',pctN:100},{label:'Inspecionadas',val:insp,pct:pI+'%',color:'#e11d48',pctN:parseFloat(pI)},{label:'Não Inspecionadas',val:nao,pct:pN+'%',color:'#64748b',pctN:parseFloat(pN)}];
+  wrap.innerHTML=`<div style="font-size:10px;color:#64748b;margin-bottom:16px;font-weight:500">PERÍODO: ${lbl}</div>${rows.map(r=>`<div class="funnel-row"><div style="min-width:180px;font-size:11px;font-weight:500;color:#0f172a">${r.label}</div><div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:${r.pctN}%;background:${r.color};min-width:60px"><span class="funnel-bar-label">${fmt(r.val)}</span></div></div><div class="funnel-meta"><div class="funnel-meta-val">${r.pct}</div><div class="funnel-meta-pct">do total auditado</div></div></div>`).join('')}<div style="margin-top:20px;padding:12px 16px;background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;display:flex;align-items:center;gap:10px"><div style="font-size:20px;font-weight:700;color:#be123c">${pN}%</div><div><div style="font-size:12px;font-weight:600;color:#be123c">Taxa de Não Conformidade</div><div style="font-size:10px;color:#64748b">Presenças não inspecionadas / total auditado</div></div></div>`;
+  renderKPI('kpi-raiox',[{label:'Total Auditados',val:fmt(aud),delta:null,sub:lbl},{label:'Inspecionados',val:fmt(insp),delta:null,sub:`${pI}% do total`},{label:'Não Inspecionados',val:fmt(nao),delta:null,sub:`${pN}% do total`}]);
+}
+
+function buildAuditoriaMonthSelect(){
+  const sel=document.getElementById('aud-mes-iso');if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="0">— Acumulado —</option>';
+  getMeses(currentMes).forEach(m=>{
+    const hasD=auditoriaData.some(d=>d.ano===currentAno&&d.mes===m);
+    const opt=document.createElement('option');opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');
+    if(hasD)opt.style.fontWeight='700';sel.appendChild(opt);
+  });
+  if(prev&&sel.querySelector(`option[value="${prev}"]`))sel.value=prev;else sel.value='0';
+}
+
+function renderAuditoria(){
+  const ano=currentAno,mes=currentMes;
+  buildAuditoriaMonthSelect();
+  const iso=parseInt(document.getElementById('aud-mes-iso').value)||0;
+  let labels,data;
+  if(iso===0){const ms=getMeses(mes);labels=ms.map(m=>MESES_LABEL[m-1]);data=ms.map(m=>{const r=auditoriaData.find(d=>d.ano===ano&&d.mes===m);return r?r.resultado:null;});}
+  else{labels=[MESES_LABEL[iso-1]];const r=auditoriaData.find(d=>d.ano===ano&&d.mes===iso);data=[r?r.resultado:null];}
+  makeLineChartWithLabels('c-auditoria',labels,[{label:'Resultado %',data,backgroundColor:'#0f172a15',borderColor:'#0f172a',borderWidth:2.5,pointRadius:6,pointBackgroundColor:'#fff',pointBorderColor:'#0f172a',pointBorderWidth:2.5,tension:.35,fill:true,spanGaps:false}]);
+  const hasAny=data.some(v=>v!==null);
+  if(!hasAny){renderKPI('kpi-auditoria',[{label:'Nenhum dado inserido',val:'—',delta:null,sub:'Acesse "Entrada de Dados"'}]);return;}
+  const vals=data.filter(v=>v!==null);
+  const med=(vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(1);
+  const ult=vals[vals.length-1];
+  renderKPI('kpi-auditoria',[{label:'Último Resultado',val:ult+'%',delta:null,sub:labels[data.lastIndexOf(ult)]||''},{label:'Média do Período',val:med+'%',delta:null,sub:`${ano}`}]);
+}
+
+function renderCurrentSector(){
+  if(currentSector==='internacao')renderInternacao();
+  else if(currentSector==='nacional')renderNacional();
+  else if(currentSector==='exportacao')renderExportacao();
+  else if(currentSector==='importacao')renderImportacao();
+  else if(currentSector==='sla')renderSLA();
+  else if(currentSector==='raiox')renderRaioX();
+  else if(currentSector==='auditoria')renderAuditoria();
+}
+
+// ============================================================
+// MONTH SELECT HELPERS
+// ============================================================
+function buildMonthSelect(selectId,ano,checkFn){
+  const sel=document.getElementById(selectId);if(!sel)return;
+  const prev=parseInt(sel.value)||1;sel.innerHTML='';
+  for(let m=1;m<=12;m++){const hasD=checkFn(ano,m);const opt=document.createElement('option');opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');if(hasD){opt.style.fontWeight='700';opt.style.color='#0f172a';}sel.appendChild(opt);}
+  sel.value=prev;
+}
+function hasSLAData(ano,mes){return slaData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasRaioXData(ano,mes){return raioxData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasAuditoriaData(ano,mes){return auditoriaData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasImpFormData(ano,mes){return impData.some(d=>d.ano===ano&&d.mes===mes);}
+
+function updateFormMonthHighlights(){
+  const sA=parseInt(document.getElementById('form-ano').value)||2026;
+  const rA=parseInt(document.getElementById('form-raiox-ano').value)||2026;
+  const aA=parseInt(document.getElementById('form-aud-ano').value)||2026;
+  const iA=parseInt(document.getElementById('form-imp-ano').value)||2026;
+  buildMonthSelect('form-mes',sA,hasSLAData);
+  buildMonthSelect('form-raiox-mes',rA,hasRaioXData);
+  buildMonthSelect('form-aud-mes',aA,hasAuditoriaData);
+  buildMonthSelect('form-imp-mes',iA,hasImpFormData);
+}
+
+function updateDashMonthSelect(){
+  const ano=parseInt(document.getElementById('sel-ano').value)||2026;
+  const sel=document.getElementById('sel-mes');const prev=parseInt(sel.value)||2;sel.innerHTML='';
+  for(let m=1;m<=12;m++){const hasD=hasMovData(ano,m);const opt=document.createElement('option');opt.value=m;opt.textContent=MESES_LABEL[m-1]+(hasD?' ●':'');if(hasD)opt.style.fontWeight='700';sel.appendChild(opt);}
+  sel.value=hasMovData(ano,prev)?prev:(maxMesComDados(ano)||1);
+  currentMes=parseInt(sel.value);
+}
+
+// ============================================================
+// NAV
+// ============================================================
+function switchMain(view,btn){
+  document.querySelectorAll('.main-nav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  const isDash=view==='dashboard';
+  document.getElementById('filter-bar').style.display=isDash?'flex':'none';
+  document.getElementById('sector-nav').style.display=isDash?'flex':'none';
+  document.querySelectorAll('.content').forEach(c=>c.style.display='none');
+  document.getElementById('view-entrada').style.display=isDash?'none':'block';
+  if(isDash){document.getElementById('sec-'+currentSector).style.display='block';renderCurrentSector();}
+  else updateFormMonthHighlights();
+}
+function switchSector(sec,btn){
+  currentSector=sec;
+  document.querySelectorAll('.sector-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.querySelectorAll('.content').forEach(c=>c.style.display='none');
+  document.getElementById('sec-'+sec).style.display='block';
+  renderCurrentSector();
+}
+function applyFilters(){
+  const newAno=parseInt(document.getElementById('sel-ano').value);
+  if(newAno!==currentAno){currentAno=newAno;updateDashMonthSelect();}
+  currentMes=parseInt(document.getElementById('sel-mes').value);
+  updatePeriodoInfo();renderCurrentSector();
+}
+function setView(v){
+  currentView=v;
+  document.getElementById('btn-acum').classList.toggle('active',v==='acumulado');
+  document.getElementById('btn-men').classList.toggle('active',v==='mensal');
+  renderCurrentSector();
+}
+function updatePeriodoInfo(){
+  const ant=currentAno-1;
+  document.getElementById('periodo-info').textContent=currentView==='acumulado'
+    ?`Jan–${MESES_LABEL[currentMes-1]}/${currentAno} vs Jan–${MESES_LABEL[currentMes-1]}/${ant}`
+    :`Mês a mês até ${MESES_LABEL[currentMes-1]}/${currentAno}`;
+}
+
+// ============================================================
+// FORM SAVES — SUPABASE
+// ============================================================
+function showMsg(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',3000);}}
+function showErr(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',4000);}}
+
+async function saveSLA(){
+  const ano=parseInt(document.getElementById('form-ano').value);
+  const mes=parseInt(document.getElementById('form-mes').value);
+  const setores=['internacao','paletizada','nacional','exportacao','importacao'];
+  const rows=[];
+  setores.forEach(s=>{const v=parseFloat(document.getElementById('sla-'+s).value);if(!isNaN(v)&&v>0)rows.push({ano,mes,setor:s,valor:v});});
+  if(!rows.length)return;
+  try{
+    await sbFetch('sla_pcg','POST',rows);
+    // update local cache
+    rows.forEach(r=>{slaData=slaData.filter(d=>!(d.ano===r.ano&&d.mes===r.mes&&d.setor===r.setor));slaData.push(r);});
+    updateFormMonthHighlights();showMsg('msg-sla');
+  }catch(e){console.error(e);showErr('err-sla');}
+}
+
+async function saveRaioX(){
+  const ano=parseInt(document.getElementById('form-raiox-ano').value);
+  const mes=parseInt(document.getElementById('form-raiox-mes').value);
+  const aud=parseFloat(document.getElementById('rx-auditados').value)||0;
+  const insp=parseFloat(document.getElementById('rx-inspecionados').value)||0;
+  const nao=parseFloat(document.getElementById('rx-nao-inspecionados').value)||0;
+  if(!aud)return;
+  try{
+    await sbFetch('raiox','POST',[{ano,mes,auditados:aud,inspecionados:insp,nao_inspecionados:nao}]);
+    raioxData=raioxData.filter(d=>!(d.ano===ano&&d.mes===mes));
+    raioxData.push({ano,mes,auditados:aud,inspecionados:insp,nao_inspecionados:nao});
+    updateFormMonthHighlights();showMsg('msg-raiox');
+  }catch(e){console.error(e);showErr('err-raiox');}
+}
+
+async function saveAuditoria(){
+  const ano=parseInt(document.getElementById('form-aud-ano').value);
+  const mes=parseInt(document.getElementById('form-aud-mes').value);
+  const res=parseFloat(document.getElementById('aud-resultado').value);
+  if(isNaN(res))return;
+  try{
+    await sbFetch('auditoria_6s','POST',[{ano,mes,resultado:res}]);
+    auditoriaData=auditoriaData.filter(d=>!(d.ano===ano&&d.mes===mes));
+    auditoriaData.push({ano,mes,resultado:res});
+    updateFormMonthHighlights();showMsg('msg-auditoria');
+  }catch(e){console.error(e);showErr('err-auditoria');}
+}
+
+function saveMovimentacao(){
+  const ano=parseInt(document.getElementById('form-mov-ano').value);
+  const mes=parseInt(document.getElementById('form-mov-mes').value);
+  const sub=document.getElementById('form-mov-setor').value;
+  const peso=parseFloat(document.getElementById('mov-peso').value)||0;
+  const vol=parseFloat(document.getElementById('mov-vol').value)||0;
+  const voos=parseFloat(document.getElementById('mov-voos').value)||0;
+  const ulds=parseFloat(document.getElementById('mov-ulds').value)||0;
+  movData=movData.filter(d=>!(d.ano===ano&&d.mes===mes&&d.sub===sub));
+  movData.push({ano,mes,sub,peso,vol,voos,ulds});
+  updateDashMonthSelect();showMsg('msg-mov');
+}
+
+// ============================================================
+// IMPORTAÇÃO — múltiplos voos por CIA/mês
+// ============================================================
+let impVoosTemp = []; // lista temporária de voos antes de salvar
+
+function renderImpVoosList() {
+  const el = document.getElementById('imp-voos-lista');
+  if (!el) return;
+  if (!impVoosTemp.length) { el.innerHTML = ''; return; }
+  const rows = impVoosTemp.map((v, i) => `
+    <tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:5px 8px;font-size:11px;color:#64748b">${v.cia}</td>
+      <td style="padding:5px 8px;font-size:11px">${v.num_voo||'—'}</td>
+      <td style="padding:5px 8px;font-size:11px;text-align:right">${new Intl.NumberFormat('pt-BR').format(v.peso)}</td>
+      <td style="padding:5px 8px;font-size:11px;text-align:right">${v.vol}</td>
+      <td style="padding:5px 8px;font-size:11px;text-align:right">${v.uld}</td>
+      <td style="padding:5px 8px;font-size:11px;text-align:right">${v.tc4}</td>
+      <td style="padding:5px 8px"><button onclick="removeImpVoo(${i})" style="background:none;border:none;color:#e11d48;cursor:pointer;font-size:13px">✕</button></td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+      <thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+        <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:600">CIA</th>
+        <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:600">N° Voo</th>
+        <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">Peso</th>
+        <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">Vol</th>
+        <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">ULD</th>
+        <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">TC4</th>
+        <th style="padding:6px 8px;width:30px"></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="font-size:10px;color:#64748b;margin-top:6px">${impVoosTemp.length} voo(s) na lista</div>`;
+}
+
+function addImpVoo() {
+  const cia = document.getElementById('form-imp-cia').value;
+  const peso = parseFloat(document.getElementById('imp-v-peso').value) || 0;
+  const vol = parseFloat(document.getElementById('imp-v-vol').value) || 0;
+  const uld = parseFloat(document.getElementById('imp-v-uld').value) || 0;
+  const tc4 = parseFloat(document.getElementById('imp-v-tc4').value) || 0;
+  const num_voo = document.getElementById('imp-v-num').value.trim();
+  if (!peso && !uld) { alert('Informe ao menos o Peso ou ULD do voo.'); return; }
+  impVoosTemp.push({ cia, peso, vol, uld, tc4, num_voo });
+  // limpar campos do voo
+  ['imp-v-peso','imp-v-vol','imp-v-uld','imp-v-tc4','imp-v-num'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  renderImpVoosList();
+}
+
+function removeImpVoo(i) {
+  impVoosTemp.splice(i, 1);
+  renderImpVoosList();
+}
+
+function clearImpVoos() {
+  impVoosTemp = [];
+  renderImpVoosList();
+}
+
+async function saveImportacao() {
+  if (!impVoosTemp.length) { alert('Adicione ao menos um voo antes de salvar.'); return; }
+  const ano = parseInt(document.getElementById('form-imp-ano').value);
+  const mes = parseInt(document.getElementById('form-imp-mes').value);
+
+  // Agrupa por CIA: soma os campos numéricos, conta voos
+  const byCia = {};
+  impVoosTemp.forEach(v => {
+    if (!byCia[v.cia]) byCia[v.cia] = { peso:0, vol:0, uld:0, tc4:0, voos:0 };
+    byCia[v.cia].peso += v.peso;
+    byCia[v.cia].vol  += v.vol;
+    byCia[v.cia].uld  += v.uld;
+    byCia[v.cia].tc4  += v.tc4;
+    byCia[v.cia].voos += 1;
+  });
+
+  // Atualiza cache local
+  Object.entries(byCia).forEach(([cia, d]) => {
+    impData = impData.filter(x => !(x.ano===ano && x.mes===mes && x.cia===cia));
+    impData.push({ ano, mes, cia, uld: d.uld, tc4: d.tc4, peso: d.peso, vol: d.vol, voos: d.voos });
+  });
+
+  // Salva voos individuais no Supabase (tabela importacao_voos)
+  try {
+    const rows = impVoosTemp.map(v => ({ ano, mes, cia: v.cia, num_voo: v.num_voo||null, peso: v.peso, vol: v.vol, uld: v.uld, tc4: v.tc4 }));
+    await sbFetch('importacao_voos', 'POST', rows);
+    impVoosTemp = [];
+    renderImpVoosList();
+    updateFormMonthHighlights();
+    updateDashMonthSelect();
+    showMsg('msg-imp');
+  } catch(e) {
+    console.error(e);
+    showErr('err-imp');
+  }
+}
+
+function updateSubsetor(){
+  const s=document.getElementById('form-mov-setor').value;
+  document.getElementById('mov-extras').style.display=['NACIONAL','PALETIZADA'].includes(s)?'grid':'none';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init(){
+  await loadFromSupabase();
+  updateDashMonthSelect();
+  updateFormMonthHighlights();
+  updatePeriodoInfo();
+  renderInternacao();
+  updateSubsetor();
+}
+init();
+</script>
+</body>
+</html>
