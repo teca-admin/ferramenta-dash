@@ -6,6 +6,7 @@
 <title>WFS Dashboard — Movimentação de Cargas</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a}
@@ -108,6 +109,10 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       Compartilhar
     </button>
+    <button onclick="openExportModal()" id="btn-export" style="display:none;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:var(--white);font-size:12px;font-weight:500;color:var(--dark);cursor:pointer;font-family:Inter,sans-serif">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar PNG
+    </button>
     <nav class="main-nav">
       <button class="main-nav-btn active" onclick="switchMain('dashboard',this)">Gráficos</button>
       <button class="main-nav-btn" onclick="switchMain('entrada',this)">Entrada de Dados</button>
@@ -115,7 +120,70 @@
   </div>
 </div>
 
-<!-- MODAL COMPARTILHAR -->
+<!-- MODAL EXPORTAR PNG -->
+<div id="export-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a">Exportar PNG</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Selecione os cards que deseja incluir na imagem</div>
+      </div>
+      <button onclick="closeExportModal()" style="background:none;border:none;font-size:18px;color:#64748b;cursor:pointer">✕</button>
+    </div>
+
+    <!-- Seletor de setor -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Setor</label>
+      <select class="filter-select" id="exp-setor" onchange="updateExportCardList()" style="width:100%">
+        <option value="internacao">Internação</option>
+        <option value="nacional">Carga Nacional</option>
+        <option value="exportacao">Exportação</option>
+        <option value="importacao">Importação</option>
+        <option value="sla">SLA PCGs</option>
+        <option value="raiox">Raio-X</option>
+        <option value="auditoria">Auditoria 6S</option>
+      </select>
+    </div>
+
+    <!-- Lista de cards -->
+    <div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px">Cards disponíveis</label>
+        <div style="display:flex;gap:8px">
+          <button onclick="toggleAllExportCards(true)" style="background:none;border:none;font-size:11px;color:#e11d48;cursor:pointer;font-weight:600">Selecionar todos</button>
+          <span style="color:#e2e8f0">|</span>
+          <button onclick="toggleAllExportCards(false)" style="background:none;border:none;font-size:11px;color:#64748b;cursor:pointer">Limpar</button>
+        </div>
+      </div>
+      <div id="exp-card-list" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:260px;overflow-y:auto;padding:2px"></div>
+    </div>
+
+    <!-- Config -->
+    <div style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
+      <div>
+        <label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Escala</label>
+        <select class="filter-select" id="exp-scale">
+          <option value="2">Alta (2x) — recomendado</option>
+          <option value="3">Máxima (3x)</option>
+          <option value="1">Normal (1x)</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Fundo</label>
+        <select class="filter-select" id="exp-bg">
+          <option value="white">Branco</option>
+          <option value="#f8fafc">Cinza claro</option>
+        </select>
+      </div>
+    </div>
+
+    <button onclick="doExportPNG()" id="exp-btn" style="width:100%;background:#e11d48;color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Baixar PNG
+    </button>
+    <div id="exp-status" style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;display:none"></div>
+  </div>
+</div>
 <div id="share-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -238,10 +306,23 @@
 <div class="content" id="sec-importacao">
   <div class="kpi-row" id="kpi-importacao"></div>
   <div class="charts-grid">
-    <div class="chart-card"><div class="chart-head"><div class="chart-title">Peso Recebido por CIA</div><div class="chart-sub" id="imp-sub-peso">Importação — barra horizontal por companhia</div></div><div class="legend" id="imp-leg-peso"></div><div style="position:relative;height:240px"><canvas id="c-imp-peso" role="img" aria-label="Peso Importação"></canvas></div></div>
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="funnel-title-row">
+          <div><div class="chart-title">Peso Recebido por CIA</div><div class="chart-sub" id="imp-sub-peso">Importação — por companhia</div></div>
+          <div class="card-filter">
+            <div class="view-toggle" style="margin-left:0">
+              <button class="view-btn active" id="imp-peso-btn-bar" onclick="setImpPesoChart('bar')">Barra</button>
+              <button class="view-btn" id="imp-peso-btn-line" onclick="setImpPesoChart('line')">Linha</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="imp-peso-wrap" style="position:relative"><canvas id="c-imp-peso" role="img" aria-label="Peso Importação"></canvas></div>
+    </div>
     <div class="chart-card"><div class="chart-head"><div class="chart-title">ULDs por CIA</div><div class="chart-sub" id="imp-sub-uld">Importação — por companhia</div></div><div class="legend" id="imp-leg-uld"></div><div style="position:relative;height:240px"><canvas id="c-imp-uld" role="img" aria-label="ULDs Importação"></canvas></div></div>
     <div class="chart-card"><div class="chart-head"><div class="chart-title">Voos por CIA</div><div class="chart-sub" id="imp-sub-voos">Importação — por companhia</div></div><div class="legend" id="imp-leg-voos"></div><div style="position:relative;height:240px"><canvas id="c-imp-voos" role="img" aria-label="Voos Importação"></canvas></div></div>
-    <div class="chart-card"><div class="chart-head"><div class="chart-title">TC4 por CIA</div><div class="chart-sub" id="imp-sub-tc4">Importação — distribuição por companhia</div></div><div style="position:relative;height:260px"><canvas id="c-imp-tc4" role="img" aria-label="TC4 Importação"></canvas></div></div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">TC4 por CIA</div><div class="chart-sub" id="imp-sub-tc4">Importação — distribuição por companhia</div></div><div style="position:relative;height:280px"><canvas id="c-imp-tc4" role="img" aria-label="TC4 Importação"></canvas></div></div>
   </div>
 </div>
 
@@ -694,24 +775,50 @@ function makeTotalBar(id,aLabel,bLabel,aVal,bVal){
   });
 }
 
-// CIA horizontal bar — Peso Recebido (FIX 5)
-function makeCIAHorizontalBar(id,labels,atlasD,latamD,tampaD){
+// CIA horizontal bar OR line — Peso Recebido (FIX 1)
+// chartType: 'bar' | 'line'
+function makeCIAPesoChart(id,labels,atlasD,latamD,tampaD,chartType){
   if(chartInstances[id])chartInstances[id].destroy();
   const ctx=document.getElementById(id);if(!ctx)return;
+  const nMeses=labels.length;
+
+  if(chartType==='line'){
+    chartInstances[id]=new Chart(ctx,{
+      type:'line',
+      data:{labels,datasets:[
+        {label:'Atlas',data:atlasD,borderColor:'#e11d48',backgroundColor:'#e11d4820',borderWidth:2,pointRadius:nMeses>6?2:4,pointBackgroundColor:'#e11d48',tension:.3,fill:false},
+        {label:'Latam',data:latamD,borderColor:'#0f172a',backgroundColor:'#0f172a20',borderWidth:2,pointRadius:nMeses>6?2:4,pointBackgroundColor:'#0f172a',tension:.3,fill:false},
+        {label:'Tampa',data:tampaD,borderColor:'#64748b',backgroundColor:'#64748b20',borderWidth:2,pointRadius:nMeses>6?2:4,pointBackgroundColor:'#64748b',tension:.3,fill:false}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        layout:{padding:{top:20}},
+        plugins:{legend:{display:true,position:'top',labels:{font:{family:'Inter',size:10},color:'#64748b',boxWidth:10,padding:10}},
+          tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},
+        scales:{
+          x:{ticks:{font:{family:'Inter',size:nMeses>8?9:10},color:'#64748b',autoSkip:false,maxRotation:0},grid:{display:false},border:{color:'#e2e8f0'}},
+          y:{ticks:{font:{family:'Inter',size:10},color:'#64748b',callback:v=>v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'#f1f5f9'},border:{display:false}}
+        }
+      }
+    });
+    return;
+  }
+
+  // Horizontal bar: altura dinâmica baseada no nº de meses (controlada externamente)
   chartInstances[id]=new Chart(ctx,{
     type:'bar',
     data:{labels,datasets:[
-      {label:'Atlas',data:atlasD,backgroundColor:'#e11d48',borderRadius:4,borderSkipped:false},
-      {label:'Latam',data:latamD,backgroundColor:'#0f172a',borderRadius:4,borderSkipped:false},
-      {label:'Tampa',data:tampaD,backgroundColor:'#64748b',borderRadius:4,borderSkipped:false}
+      {label:'Atlas',data:atlasD,backgroundColor:'#e11d48',borderRadius:3,borderSkipped:false},
+      {label:'Latam',data:latamD,backgroundColor:'#0f172a',borderRadius:3,borderSkipped:false},
+      {label:'Tampa',data:tampaD,backgroundColor:'#64748b',borderRadius:3,borderSkipped:false}
     ]},
     options:{
       indexAxis:'y',
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},
+      plugins:{legend:{display:true,position:'top',labels:{font:{family:'Inter',size:10},color:'#64748b',boxWidth:10,padding:10}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},
       scales:{
         x:{ticks:{font:{family:'Inter',size:10},color:'#64748b',callback:v=>v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'#f1f5f9'},border:{display:false}},
-        y:{ticks:{font:{family:'Inter',size:10},color:'#64748b',autoSkip:false},grid:{display:false},border:{color:'#e2e8f0'}}
+        y:{ticks:{font:{family:'Inter',size:nMeses>8?8:10},color:'#64748b',autoSkip:false},grid:{display:false},border:{color:'#e2e8f0'}}
       }
     },
     plugins:[{
@@ -722,9 +829,11 @@ function makeCIAHorizontalBar(id,labels,atlasD,latamD,tampaD){
           const meta=chart.getDatasetMeta(di);
           meta.data.forEach((bar,i)=>{
             const v=data.datasets[di].data[i];if(!v)return;
-            const barW=bar.x-bar.base;if(barW<40)return;
-            const lbl=v>=1000000?(v/1000000).toFixed(2).replace('.',',')+'M':v>=1000?(v/1000).toFixed(1)+'k':String(Math.round(v));
-            c.save();c.font='600 11px Inter';c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+            const barW=bar.x-bar.base;
+            const minW=nMeses>8?50:40;
+            if(barW<minW)return;
+            const lbl=v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':String(Math.round(v));
+            c.save();c.font=`600 ${nMeses>8?9:11}px Inter`;c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
             c.fillText(lbl,bar.base+barW/2,bar.y);c.restore();
           });
         });
@@ -733,37 +842,67 @@ function makeCIAHorizontalBar(id,labels,atlasD,latamD,tampaD){
   });
 }
 
-// CIA donut — TC4 (FIX 4)
+// CIA donut — TC4 com valores nas fatias (FIX 2)
 function makeCIADonut(id,atlasV,latamV,tampaV){
   if(chartInstances[id])chartInstances[id].destroy();
   const ctx=document.getElementById(id);if(!ctx)return;
   const total=atlasV+latamV+tampaV;
+  const vals=[atlasV,latamV,tampaV];
+  const cores=['#e11d48','#0f172a','#64748b'];
+  const nomes=['Atlas','Latam','Tampa'];
   chartInstances[id]=new Chart(ctx,{
     type:'doughnut',
     data:{
-      labels:['Atlas','Latam','Tampa'],
-      datasets:[{data:[atlasV,latamV,tampaV],backgroundColor:['#e11d48','#0f172a','#64748b'],borderWidth:2,borderColor:'#fff',hoverOffset:6}]
+      labels:nomes,
+      datasets:[{data:vals,backgroundColor:cores,borderWidth:2,borderColor:'#fff',hoverOffset:6}]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
-      cutout:'60%',
+      cutout:'55%',
       plugins:{
         legend:{display:true,position:'bottom',labels:{font:{family:'Inter',size:10},color:'#64748b',padding:12,boxWidth:10,boxHeight:10}},
-        tooltip:{callbacks:{label:c=>{const pct=total>0?((c.raw/total)*100).toFixed(1):'0';return` ${c.label}: ${fmt(c.raw)} (${pct}%)`;}}},
+        tooltip:{callbacks:{label:c=>{const pct=total>0?((c.raw/total)*100).toFixed(1):'0';return` ${c.label}: ${fmt(c.raw)} (${pct}%)`;}}}
       }
     },
-    plugins:[{
-      id:'donutCenter',
-      afterDatasetsDraw(chart){
-        const {ctx:c,chartArea:{top,bottom,left,right}}=chart;
-        const cx=(left+right)/2,cy=(top+bottom)/2;
-        c.save();c.font='700 14px Inter';c.fillStyle='#0f172a';c.textAlign='center';c.textBaseline='middle';
-        c.fillText(fmt(total),cx,cy-6);
-        c.font='400 10px Inter';c.fillStyle='#64748b';
-        c.fillText('Total TC4',cx,cy+10);
-        c.restore();
+    plugins:[
+      {
+        id:'donutCenter',
+        afterDatasetsDraw(chart){
+          const {ctx:c,chartArea:{top,bottom,left,right}}=chart;
+          const cx=(left+right)/2,cy=(top+bottom)/2;
+          c.save();c.font='700 14px Inter';c.fillStyle='#0f172a';c.textAlign='center';c.textBaseline='middle';
+          c.fillText(fmt(total),cx,cy-6);
+          c.font='400 10px Inter';c.fillStyle='#64748b';
+          c.fillText('Total TC4',cx,cy+10);
+          c.restore();
+        }
+      },
+      {
+        id:'sliceLabels',
+        afterDatasetsDraw(chart){
+          const {ctx:c}=chart;
+          const meta=chart.getDatasetMeta(0);
+          meta.data.forEach((arc,i)=>{
+            const v=vals[i];if(!v||total===0)return;
+            // posição no meio do arco (raio externo)
+            const angle=(arc.startAngle+arc.endAngle)/2;
+            const r=arc.outerRadius*0.78;
+            const x=arc.x+Math.cos(angle)*r;
+            const y=arc.y+Math.sin(angle)*r;
+            c.save();
+            c.font='600 11px Inter';c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+            // só mostra se fatia grande o suficiente
+            const arcSpan=arc.endAngle-arc.startAngle;
+            if(arcSpan>0.35){
+              c.fillText(fmt(v),x,y-7);
+              c.font='400 9px Inter';
+              c.fillText(((v/total)*100).toFixed(1)+'%',x,y+6);
+            }
+            c.restore();
+          });
+        }
       }
-    }]
+    ]
   });
 }
 
@@ -911,6 +1050,15 @@ function renderExportacao(){
   }
 }
 
+let impPesoChartType = 'bar'; // estado global do tipo de gráfico
+
+function setImpPesoChart(type){
+  impPesoChartType = type;
+  document.getElementById('imp-peso-btn-bar').classList.toggle('active', type==='bar');
+  document.getElementById('imp-peso-btn-line').classList.toggle('active', type==='line');
+  renderImportacao();
+}
+
 function renderImportacao(){
   const ano=currentAno,mes=currentMes;
   if(!impData.some(d=>d.ano===ano&&d.mes<=mes)){
@@ -919,8 +1067,10 @@ function renderImportacao(){
     showNoData('nd-imp',ano,mes);return;
   }
   const ms=getMeses(mes),lbls=ms.map(m=>MESES_LABEL[m-1]);
+  const nMeses=ms.length;
+
   const legHTML=['#e11d48','#0f172a','#64748b'].map((c,i)=>`<span class="leg-item"><span class="leg-dot" style="background:${c}"></span>${['Atlas','Latam','Tampa'][i]}</span>`).join('');
-  ['imp-leg-peso','imp-leg-uld','imp-leg-voos','imp-leg-tc4'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=legHTML;});
+  ['imp-leg-uld','imp-leg-voos'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=legHTML;});
   const sub=`${ano} — Jan a ${MESES_LABEL[mes-1]}`;
   ['imp-sub-peso','imp-sub-uld','imp-sub-voos','imp-sub-tc4'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=sub;});
 
@@ -933,14 +1083,23 @@ function renderImportacao(){
   const aV=ms.map(m=>getImpMensal('ATLAS',ano,m).voos);
   const lV=ms.map(m=>getImpMensal('LATAM',ano,m).voos);
   const tV=ms.map(m=>getImpMensal('TAMPA',ano,m).voos);
-  const aT=ms.map(m=>getImpMensal('ATLAS',ano,m).tc4);
-  const lT=ms.map(m=>getImpMensal('LATAM',ano,m).tc4);
-  const tT=ms.map(m=>getImpMensal('TAMPA',ano,m).tc4);
 
-  makeCIAHorizontalBar('c-imp-peso',lbls,aP,lP,tP);
+  // Altura dinâmica: barra horizontal precisa de mais altura quando muitos meses
+  const wrap=document.getElementById('imp-peso-wrap');
+  if(wrap){
+    const h = impPesoChartType==='bar'
+      ? Math.max(240, nMeses * 36)  // 36px por mês (3 CIAs comprimidas)
+      : 260;
+    wrap.style.height=h+'px';
+    // recriar canvas se necessário
+    let canvas=document.getElementById('c-imp-peso');
+    if(!canvas){canvas=document.createElement('canvas');canvas.id='c-imp-peso';canvas.setAttribute('role','img');wrap.appendChild(canvas);}
+  }
+
+  makeCIAPesoChart('c-imp-peso',lbls,aP,lP,tP,impPesoChartType);
   makeCIABar('c-imp-uld',lbls,aU,lU,tU);
   makeCIABar('c-imp-voos',lbls,aV,lV,tV);
-  // TC4 donut: sum per CIA for the period
+
   const totA2=getImpAcum('ATLAS',ano,mes),totL2=getImpAcum('LATAM',ano,mes),totT2=getImpAcum('TAMPA',ano,mes);
   makeCIADonut('c-imp-tc4',totA2.tc4,totL2.tc4,totT2.tc4);
 
@@ -1293,7 +1452,9 @@ function switchMain(view,btn){
   document.querySelectorAll('.content').forEach(c=>c.style.display='none');
   document.getElementById('view-entrada').style.display=isDash?'none':'block';
   const shareBtn=document.getElementById('btn-share');
+  const expBtn=document.getElementById('btn-export');
   if(shareBtn)shareBtn.style.display=isDash?'flex':'none';
+  if(expBtn)expBtn.style.display=isDash?'flex':'none';
   if(isDash){document.getElementById('sec-'+currentSector).style.display='block';reloadAndRender();}
   else updateFormMonthHighlights();
 }
@@ -1302,6 +1463,8 @@ function switchSector(sec,btn){
   document.querySelectorAll('.sector-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
   document.querySelectorAll('.content').forEach(c=>c.style.display='none');
   document.getElementById('sec-'+sec).style.display='block';
+  // Sync export modal setor
+  const expSel=document.getElementById('exp-setor');if(expSel)expSel.value=sec;
   renderCurrentSector();
 }
 async function applyFilters(){
@@ -1471,6 +1634,153 @@ function checkViewMode(){
 }
 
 // ============================================================
+// EXPORT PNG — FIX #3
+// ============================================================
+// Mapa de cards por setor: { setor: [{id, label}] }
+const EXPORT_CARDS = {
+  internacao: [
+    {id:'c-int-g-peso', label:'Peso Granel', card:'.chart-card:has(#c-int-g-peso)'},
+    {id:'c-int-g-vol',  label:'Volume Granel', card:'.chart-card:has(#c-int-g-vol)'},
+    {id:'c-int-p-peso', label:'Peso Paletizada', card:'.chart-card:has(#c-int-p-peso)'},
+    {id:'c-int-p-vol',  label:'Volume Paletizada', card:'.chart-card:has(#c-int-p-vol)'},
+    {id:'c-int-p-uld',  label:'ULDs Paletizada', card:'.chart-card:has(#c-int-p-uld)'},
+    {id:'c-int-total',  label:'Total Internação', card:'.chart-card:has(#c-int-total)'},
+  ],
+  nacional: [
+    {id:'c-nac-peso', label:'Peso Nacional'},
+    {id:'c-nac-vol',  label:'Volume Nacional'},
+    {id:'c-nac-voos', label:'Voos Nacional'},
+    {id:'c-nac-uld',  label:'ULDs Nacional'},
+  ],
+  exportacao: [
+    {id:'c-exp-peso',  label:'Peso Exportação'},
+    {id:'c-exp-vol',   label:'Volume Exportação'},
+    {id:'c-exp-total', label:'Total Exportação'},
+  ],
+  importacao: [
+    {id:'c-imp-peso', label:'Peso por CIA'},
+    {id:'c-imp-uld',  label:'ULDs por CIA'},
+    {id:'c-imp-voos', label:'Voos por CIA'},
+    {id:'c-imp-tc4',  label:'TC4 por CIA'},
+  ],
+  sla: [
+    {id:'c-sla-all', label:'SLA PCGs'},
+  ],
+  raiox: [
+    {id:'raiox-funnel-wrap', label:'Inspeções Raio-X'},
+  ],
+  auditoria: [
+    {id:'c-auditoria', label:'Auditoria 6S'},
+  ],
+};
+
+function openExportModal(){
+  const sel=document.getElementById('exp-setor');
+  if(sel) sel.value=currentSector;
+  updateExportCardList();
+  document.getElementById('export-modal').style.display='flex';
+}
+function closeExportModal(){ document.getElementById('export-modal').style.display='none'; }
+
+function updateExportCardList(){
+  const setor=document.getElementById('exp-setor').value;
+  const cards=EXPORT_CARDS[setor]||[];
+  const list=document.getElementById('exp-card-list');
+  list.innerHTML=cards.map((c,i)=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:12px;color:#0f172a;background:#fff;transition:.1s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+      <input type="checkbox" value="${c.id}" checked style="accent-color:#e11d48;width:14px;height:14px"> ${c.label}
+    </label>`).join('');
+}
+
+function toggleAllExportCards(checked){
+  document.querySelectorAll('#exp-card-list input[type=checkbox]').forEach(cb=>cb.checked=checked);
+}
+
+async function doExportPNG(){
+  const setor=document.getElementById('exp-setor').value;
+  const scale=parseInt(document.getElementById('exp-scale').value)||2;
+  const bg=document.getElementById('exp-bg').value||'white';
+  const selected=[...document.querySelectorAll('#exp-card-list input[type=checkbox]:checked')].map(c=>c.value);
+  if(!selected.length){ alert('Selecione ao menos um card.'); return; }
+
+  const btn=document.getElementById('exp-btn');
+  const status=document.getElementById('exp-status');
+  btn.disabled=true; btn.textContent='Gerando...';
+  status.style.display='block'; status.textContent='Capturando os gráficos…';
+
+  try {
+    // Monta um container temporário com os cards selecionados
+    const container=document.createElement('div');
+    container.style.cssText=`position:fixed;left:-9999px;top:0;background:${bg};padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;width:1200px;font-family:Inter,sans-serif`;
+    document.body.appendChild(container);
+
+    // Título
+    const title=document.createElement('div');
+    title.style.cssText='grid-column:1/-1;padding-bottom:16px;border-bottom:2px solid #e11d48;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between';
+    const nomeSetor={internacao:'Internação',nacional:'Carga Nacional',exportacao:'Exportação',importacao:'Importação',sla:'SLA PCGs',raiox:'Raio-X',auditoria:'Auditoria 6S'};
+    title.innerHTML=`<div><div style="font-size:18px;font-weight:700;color:#0f172a">WFS — ${nomeSetor[setor]||setor}</div><div style="font-size:12px;color:#64748b;margin-top:2px">${MESES_LABEL[currentMes-1]}/${currentAno} · Gerado em ${new Date().toLocaleDateString('pt-BR')}</div></div><div style="font-size:11px;color:#64748b">Worldflight Services</div>`;
+    container.appendChild(title);
+
+    const cards=EXPORT_CARDS[setor]||[];
+    for(const card of cards){
+      if(!selected.includes(card.id)) continue;
+      const srcEl=document.getElementById(card.id);
+      if(!srcEl) continue;
+      // Pegar o card pai (.chart-card)
+      const cardEl=srcEl.closest('.chart-card')||srcEl.parentElement;
+      if(!cardEl) continue;
+
+      const clone=cardEl.cloneNode(true);
+      clone.style.cssText='background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px;break-inside:avoid';
+      // Se é canvas, precisa substituir pela imagem do canvas original
+      const origCanvas=cardEl.querySelector('canvas');
+      if(origCanvas){
+        const cloneCanvas=clone.querySelector('canvas');
+        if(cloneCanvas){
+          const img=document.createElement('img');
+          img.src=origCanvas.toDataURL('image/png');
+          img.style.cssText='width:100%;height:auto;display:block';
+          cloneCanvas.replaceWith(img);
+        }
+      }
+      container.appendChild(clone);
+    }
+
+    // Aguarda renderização
+    await new Promise(r=>setTimeout(r,300));
+    status.textContent='Aplicando escala e exportando…';
+
+    const canvas=await html2canvas(container,{
+      scale,
+      useCORS:true,
+      backgroundColor:bg,
+      logging:false,
+      allowTaint:true
+    });
+
+    document.body.removeChild(container);
+
+    // Download
+    const link=document.createElement('a');
+    const mesStr=MESES_LABEL[currentMes-1].toLowerCase();
+    link.download=`wfs-${setor}-${mesStr}${currentAno}.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+
+    status.textContent='✓ PNG baixado com sucesso!';
+    status.style.color='#15803d';
+  } catch(e) {
+    console.error(e);
+    status.textContent='Erro ao gerar PNG. Tente novamente.';
+    status.style.color='#be123c';
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar PNG`;
+    setTimeout(()=>{status.style.display='none';status.style.color='#64748b';},4000);
+  }
+}
+
+// ============================================================
 // INIT
 // ============================================================
 async function init(){
@@ -1480,7 +1790,11 @@ async function init(){
     updateDashMonthSelect();
     updateFormMonthHighlights();
     document.getElementById('btn-share').style.display='flex';
+    document.getElementById('btn-export').style.display='flex';
   } else {
+    // No modo view, mostrar apenas exportar PNG (sem compartilhar)
+    const expBtn=document.getElementById('btn-export');
+    if(expBtn)expBtn.style.display='flex';
     // FIX #3: No modo view, pre-selecionar mês no SLA após carregar dados
     if(window._viewMes){
       buildSLAMesSelect();
