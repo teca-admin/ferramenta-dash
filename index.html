@@ -304,7 +304,6 @@
 
 <!-- IMPORTAÇÃO -->
 <div class="content" id="sec-importacao">
-  <div class="kpi-row" id="kpi-importacao"></div>
   <div class="charts-grid">
     <div class="chart-card">
       <div class="chart-head">
@@ -320,6 +319,7 @@
       </div>
       <div id="imp-peso-wrap" style="position:relative"><canvas id="c-imp-peso" role="img" aria-label="Peso Importação"></canvas></div>
     </div>
+    <div class="chart-card"><div class="chart-head"><div class="chart-title">Volume por CIA</div><div class="chart-sub" id="imp-sub-vol">Importação — distribuição por companhia</div></div><div style="position:relative;height:280px"><canvas id="c-imp-vol" role="img" aria-label="Volume Importação"></canvas></div></div>
     <div class="chart-card"><div class="chart-head"><div class="chart-title">ULDs por CIA</div><div class="chart-sub" id="imp-sub-uld">Importação — por companhia</div></div><div class="legend" id="imp-leg-uld"></div><div style="position:relative;height:240px"><canvas id="c-imp-uld" role="img" aria-label="ULDs Importação"></canvas></div></div>
     <div class="chart-card"><div class="chart-head"><div class="chart-title">Voos por CIA</div><div class="chart-sub" id="imp-sub-voos">Importação — por companhia</div></div><div class="legend" id="imp-leg-voos"></div><div style="position:relative;height:240px"><canvas id="c-imp-voos" role="img" aria-label="Voos Importação"></canvas></div></div>
     <div class="chart-card"><div class="chart-head"><div class="chart-title">TC4 por CIA</div><div class="chart-sub" id="imp-sub-tc4">Importação — distribuição por companhia</div></div><div style="position:relative;height:280px"><canvas id="c-imp-tc4" role="img" aria-label="TC4 Importação"></canvas></div></div>
@@ -550,11 +550,12 @@
       <!-- linha para adicionar um voo -->
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px">
         <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Adicionar Voo</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
           <div class="form-group"><label>Peso (kg)</label><input type="number" id="imp-v-peso" placeholder="ex: 320000"></div>
           <div class="form-group"><label>Volume</label><input type="number" id="imp-v-vol" placeholder="ex: 5000"></div>
           <div class="form-group"><label>ULD</label><input type="number" id="imp-v-uld" placeholder="ex: 120"></div>
           <div class="form-group"><label>TC4</label><input type="number" id="imp-v-tc4" placeholder="ex: 95"></div>
+          <div class="form-group"><label>Voos</label><input type="number" id="imp-v-voos" placeholder="ex: 4"></div>
 
           <div>
             <button onclick="addImpVoo()" style="background:#0f172a;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">+ Adicionar</button>
@@ -914,6 +915,56 @@ function makeCIADonut(id,atlasV,latamV,tampaV){
   });
 }
 
+// CIA pie — Volume por CIA
+function makeCIAPie(id,atlasV,latamV,tampaV){
+  if(chartInstances[id])chartInstances[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  const total=atlasV+latamV+tampaV;
+  const vals=[atlasV,latamV,tampaV];
+  const cores=['#e11d48','#0f172a','#64748b'];
+  const nomes=['Atlas','Latam','Tampa'];
+  chartInstances[id]=new Chart(ctx,{
+    type:'pie',
+    data:{
+      labels:nomes,
+      datasets:[{data:vals,backgroundColor:cores,borderWidth:2,borderColor:'#fff',hoverOffset:6}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{font:{family:'Inter',size:10},color:'#64748b',padding:12,boxWidth:10,boxHeight:10}},
+        tooltip:{callbacks:{label:c=>{const pct=total>0?((c.raw/total)*100).toFixed(1):'0';return` ${c.label}: ${fmt(c.raw)} (${pct}%)`;}}
+        }
+      }
+    },
+    plugins:[
+      {
+        id:'pieSliceLabels',
+        afterDatasetsDraw(chart){
+          const {ctx:c}=chart;
+          const meta=chart.getDatasetMeta(0);
+          meta.data.forEach((arc,i)=>{
+            const v=vals[i];if(!v||total===0)return;
+            const angle=(arc.startAngle+arc.endAngle)/2;
+            const r=arc.outerRadius*0.65;
+            const x=arc.x+Math.cos(angle)*r;
+            const y=arc.y+Math.sin(angle)*r;
+            c.save();
+            c.font='600 11px Inter';c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+            const arcSpan=arc.endAngle-arc.startAngle;
+            if(arcSpan>0.35){
+              c.fillText(fmt(v),x,y-7);
+              c.font='400 9px Inter';
+              c.fillText(((v/total)*100).toFixed(1)+'%',x,y+6);
+            }
+            c.restore();
+          });
+        }
+      }
+    ]
+  });
+}
+
 // CIA grouped bar — voos/ulds (unchanged)
 function makeCIABar(id,labels,atlasD,latamD,tampaD){
   if(chartInstances[id])chartInstances[id].destroy();
@@ -1071,7 +1122,7 @@ function renderImportacao(){
   const ano=currentAno,mes=currentMes;
   if(!impData.some(d=>d.ano===ano&&d.mes<=mes)){
     const sec=document.getElementById('sec-importacao');
-    sec.innerHTML=`<div class="kpi-row" id="kpi-importacao"></div><div class="charts-grid" id="nd-imp"></div>`;
+    sec.innerHTML=`<div class="charts-grid" id="nd-imp"></div>`;
     showNoData('nd-imp',ano,mes);return;
   }
   const ms=getMeses(mes),lbls=ms.map(m=>MESES_LABEL[m-1]);
@@ -1080,7 +1131,7 @@ function renderImportacao(){
   const legHTML=['#e11d48','#0f172a','#64748b'].map((c,i)=>`<span class="leg-item"><span class="leg-dot" style="background:${c}"></span>${['Atlas','Latam','Tampa'][i]}</span>`).join('');
   ['imp-leg-uld','imp-leg-voos'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=legHTML;});
   const sub=`${ano} — Jan a ${MESES_LABEL[mes-1]}`;
-  ['imp-sub-peso','imp-sub-uld','imp-sub-voos','imp-sub-tc4'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=sub;});
+  ['imp-sub-peso','imp-sub-uld','imp-sub-voos','imp-sub-tc4','imp-sub-vol'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=sub;});
 
   const aP=ms.map(m=>getImpMensal('ATLAS',ano,m).peso);
   const lP=ms.map(m=>getImpMensal('LATAM',ano,m).peso);
@@ -1112,19 +1163,7 @@ function renderImportacao(){
   makeCIADonut('c-imp-tc4',totA2.tc4,totL2.tc4,totT2.tc4);
 
   const totA=getImpAcum('ATLAS',ano,mes),totL=getImpAcum('LATAM',ano,mes),totT=getImpAcum('TAMPA',ano,mes);
-  const movImpAcum=getAcum('IMPORTAÇÃO',ano,mes);
-  const kpiImp=[
-    {label:'Peso Total (todas CIAs)',val:fmtM(totA.peso+totL.peso+totT.peso),delta:null,sub:`${ano} acum.`},
-    {label:'ULDs Total',val:fmt(totA.ulds+totL.ulds+totT.ulds),delta:null,sub:''},
-    {label:'Atlas — Peso',val:fmtM(totA.peso),delta:null,sub:''},
-    {label:'Latam — Peso',val:fmtM(totL.peso),delta:null,sub:''},
-    {label:'Tampa — Peso',val:fmtM(totT.peso),delta:null,sub:''},
-  ];
-  if(movImpAcum.peso>0){
-    kpiImp.unshift({label:'Peso Setor (Manual)',val:fmtM(movImpAcum.peso),delta:null,sub:`${ano} acum. — inserido manualmente`});
-    kpiImp.push({label:'Volume Setor (Manual)',val:fmt(movImpAcum.vol),delta:null,sub:`${ano} acum.`});
-  }
-  renderKPI('kpi-importacao',kpiImp);
+  makeCIAPie('c-imp-vol',totA.vol,totL.vol,totT.vol);
 }
 
 function buildSLAMesSelect(){
@@ -1334,6 +1373,7 @@ function renderImpVoosList() {
       <td style="padding:5px 8px;font-size:11px;text-align:right">${v.vol}</td>
       <td style="padding:5px 8px;font-size:11px;text-align:right">${v.uld}</td>
       <td style="padding:5px 8px;font-size:11px;text-align:right">${v.tc4}</td>
+      <td style="padding:5px 8px;font-size:11px;text-align:right">${v.voos}</td>
       <td style="padding:5px 8px"><button onclick="removeImpVoo(${i})" style="background:none;border:none;color:#e11d48;cursor:pointer;font-size:13px">✕</button></td>
     </tr>`).join('');
   el.innerHTML = `
@@ -1345,6 +1385,7 @@ function renderImpVoosList() {
         <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">Vol</th>
         <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">ULD</th>
         <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">TC4</th>
+        <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">Voos</th>
         <th style="padding:6px 8px;width:30px"></th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -1358,10 +1399,11 @@ function addImpVoo() {
   const vol = parseFloat(document.getElementById('imp-v-vol').value) || 0;
   const uld = parseFloat(document.getElementById('imp-v-uld').value) || 0;
   const tc4 = parseFloat(document.getElementById('imp-v-tc4').value) || 0;
+  const voos = parseFloat(document.getElementById('imp-v-voos').value) || 0;
   if (!peso && !uld) { alert('Informe ao menos o Peso ou ULD do voo.'); return; }
-  impVoosTemp.push({ cia, peso, vol, uld, tc4 });
+  impVoosTemp.push({ cia, peso, vol, uld, tc4, voos });
   // limpar campos do voo
-  ['imp-v-peso','imp-v-vol','imp-v-uld','imp-v-tc4'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['imp-v-peso','imp-v-vol','imp-v-uld','imp-v-tc4','imp-v-voos'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   renderImpVoosList();
 }
 
@@ -1388,7 +1430,7 @@ async function saveImportacao() {
     byCia[v.cia].vol  += v.vol;
     byCia[v.cia].uld  += v.uld;
     byCia[v.cia].tc4  += v.tc4;
-    byCia[v.cia].voos += 1;
+    byCia[v.cia].voos += v.voos;
   });
 
   // Atualiza cache local
@@ -1399,7 +1441,7 @@ async function saveImportacao() {
 
   // Salva voos individuais no Supabase (tabela importacao_voos)
   try {
-    const rows = impVoosTemp.map(v => ({ ano, mes, cia: v.cia, peso: v.peso, vol: v.vol, uld: v.uld, tc4: v.tc4 }));
+    const rows = impVoosTemp.map(v => ({ ano, mes, cia: v.cia, peso: v.peso, vol: v.vol, uld: v.uld, tc4: v.tc4, voos: v.voos }));
     await sbFetch('importacao_voos', 'POST', rows);
     impVoosTemp = [];
     renderImpVoosList();
