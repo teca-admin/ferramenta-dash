@@ -1463,7 +1463,7 @@ async function saveImportacao() {
 
   // Salva voos individuais no Supabase (tabela importacao_voos)
   try {
-    const rows = impVoosTemp.map(v => ({ ano, mes, cia: v.cia, peso: v.peso, vol: v.vol, uld: v.uld, tc4: v.tc4, voos: v.voos }));
+    const rows = impVoosTemp.map(v => ({ ano, mes, cia: v.cia, peso: v.peso, vol: v.vol, uld: v.uld, tc4: v.tc4, num_voo: String(v.voos) }));
     await sbFetch('importacao_voos', 'POST', rows);
     impVoosTemp = [];
     renderImpVoosList();
