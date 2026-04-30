@@ -677,6 +677,10 @@ function deltaStr(d){if(d===null)return'';return(d>=0?'+':'')+d.toFixed(2).repla
 function getMeses(m){return Array.from({length:m},(_,i)=>i+1);}
 function hasMovData(ano,mes){return movData.some(d=>d.ano===ano&&d.mes===mes);}
 function hasImpData(ano,mes){return impData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasSLAData(ano,mes){return slaData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasRaioXData(ano,mes){return raioxData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasAuditoriaData(ano,mes){return auditoriaData.some(d=>d.ano===ano&&d.mes===mes);}
+function hasImpFormData(ano,mes){return impData.some(d=>d.ano===ano&&d.mes===mes);}
 function maxMesComDados(ano){const r=movData.filter(d=>d.ano===ano);return r.length?Math.max(...r.map(d=>d.mes)):0;}
 function getAcum(sub,ano,ate){const ms=getMeses(ate);const r=movData.filter(d=>d.sub===sub&&d.ano===ano&&ms.includes(d.mes));return{peso:r.reduce((s,x)=>s+x.peso,0),vol:r.reduce((s,x)=>s+x.vol,0),voos:r.reduce((s,x)=>s+x.voos,0),ulds:r.reduce((s,x)=>s+x.ulds,0)};}
 function getMensal(sub,ano,mes){const r=movData.find(d=>d.sub===sub&&d.ano===ano&&d.mes===mes);return r||{peso:0,vol:0,voos:0,ulds:0};}
@@ -1567,13 +1571,29 @@ function openShareModal(){
 function closeShareModal(){
   document.getElementById('share-modal').style.display='none';
 }
+const SETOR_ENCODE={'internacao':'i','nacional':'n','exportacao':'e','importacao':'m','sla':'s','raiox':'r','auditoria':'a'};
+const SETOR_DECODE={'i':'internacao','n':'nacional','e':'exportacao','m':'importacao','s':'sla','r':'raiox','a':'auditoria'};
+function encodeShareUrl(ano,mes,setores){
+  const base=window.location.origin+window.location.pathname;
+  const anoShort=String(ano).slice(-2);
+  const codes=setores.map(s=>SETOR_ENCODE[s]||s).join('');
+  return `${base}?v=${anoShort}-${mes}-${codes}`;
+}
+function decodeShareParam(v){
+  const parts=v.split('-');
+  if(parts.length<3)return null;
+  const ano=parseInt('20'+parts[0]);
+  const mes=parseInt(parts[1]);
+  const codes=parts[2].split('');
+  const setores=codes.map(c=>SETOR_DECODE[c]||c).filter(Boolean);
+  return{ano,mes,setores};
+}
 function gerarLink(){
   const ano=document.getElementById('share-ano').value;
   const mes=document.getElementById('share-mes').value;
   const checks=document.querySelectorAll('#share-setores input[type=checkbox]:checked');
-  const setores=[...checks].map(c=>c.value).join(',');
-  const base=window.location.origin+window.location.pathname;
-  const url=`${base}?view=1&ano=${ano}&mes=${mes}&setores=${setores}`;
+  const setores=[...checks].map(c=>c.value);
+  const url=encodeShareUrl(ano,mes,setores);
   document.getElementById('share-url').value=url;
   document.getElementById('share-result').style.display='block';
 }
@@ -1586,13 +1606,21 @@ function copiarLink(){
   });
 }
 
-// VIEW MODE — quando URL contém ?view=1 trava tudo (read-only)
+// VIEW MODE — suporta ?v=26-1-inesmra (compacto) e ?view=1&ano=...&mes=...&setores=... (legado)
 function checkViewMode(){
   const params=new URLSearchParams(window.location.search);
-  if(!params.get('view'))return false;
-  const ano=parseInt(params.get('ano'))||2026;
-  const mes=parseInt(params.get('mes'))||2;
-  const setores=(params.get('setores')||'internacao,nacional,exportacao,importacao,sla,raiox,auditoria').split(',');
+  let ano,mes,setores;
+  if(params.get('v')){
+    const dec=decodeShareParam(params.get('v'));
+    if(!dec)return false;
+    ano=dec.ano;mes=dec.mes;setores=dec.setores;
+  } else if(params.get('view')){
+    ano=parseInt(params.get('ano'))||2026;
+    mes=parseInt(params.get('mes'))||2;
+    setores=(params.get('setores')||'internacao,nacional,exportacao,importacao,sla,raiox,auditoria').split(',');
+  } else {
+    return false;
+  }
   // Esconde controles
   const toHide=['filter-bar','sector-nav','view-entrada'];
   toHide.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
