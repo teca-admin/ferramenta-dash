@@ -513,6 +513,8 @@
       <div class="form-row">
         <div class="form-group"><label>Peso (kg)</label><input type="number" id="mov-peso" placeholder="ex: 1500000"></div>
         <div class="form-group"><label>Volume</label><input type="number" id="mov-vol" placeholder="ex: 95000"></div>
+        <div class="form-group" id="mov-uld-group" style="display:none"><label>ULD</label><input type="number" id="mov-uld" placeholder="ex: 1082"></div>
+        <div class="form-group" id="mov-facn-group" style="display:none"><label>FACN (Voos)</label><input type="number" id="mov-facn" placeholder="ex: 688"></div>
       </div>
       <div id="msg-mov-update" style="display:none;background:#fef9c3;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#92400e">
         ⚠ Já existem dados para este mês/setor.
@@ -1411,7 +1413,11 @@ async function saveImportacao() {
 }
 
 function onMovSetorChange(){
-  // ao trocar setor, recarrega dados do mês selecionado
+  const sub=document.getElementById('form-mov-setor').value;
+  const showUld = sub==='PALETIZADA'||sub==='NACIONAL';
+  const showFacn = sub==='NACIONAL';
+  document.getElementById('mov-uld-group').style.display = showUld ? '' : 'none';
+  document.getElementById('mov-facn-group').style.display = showFacn ? '' : 'none';
   onMovMesChange();
 }
 
@@ -1419,16 +1425,18 @@ function onMovMesChange(){
   const ano=parseInt(document.getElementById('form-mov-ano').value);
   const mes=parseInt(document.getElementById('form-mov-mes').value);
   const sub=document.getElementById('form-mov-setor').value;
-  // Esconde aviso de update
   hideMovUpdate();
-  // Carrega dados existentes ou limpa campos
   const existing=movData.find(d=>d.ano===ano&&d.mes===mes&&d.sub===sub);
   if(existing){
     document.getElementById('mov-peso').value=existing.peso||'';
     document.getElementById('mov-vol').value=existing.vol||'';
+    const uldEl=document.getElementById('mov-uld'); if(uldEl) uldEl.value=existing.ulds||'';
+    const facnEl=document.getElementById('mov-facn'); if(facnEl) facnEl.value=existing.voos||'';
   } else {
     document.getElementById('mov-peso').value='';
     document.getElementById('mov-vol').value='';
+    const uldEl=document.getElementById('mov-uld'); if(uldEl) uldEl.value='';
+    const facnEl=document.getElementById('mov-facn'); if(facnEl) facnEl.value='';
   }
 }
 
@@ -1577,6 +1585,10 @@ function saveMovimentacao(force=false){
   const sub=document.getElementById('form-mov-setor').value;
   const peso=parseFloat(document.getElementById('mov-peso').value)||0;
   const vol=parseFloat(document.getElementById('mov-vol').value)||0;
+  const uldEl=document.getElementById('mov-uld');
+  const facnEl=document.getElementById('mov-facn');
+  const ulds=uldEl?parseFloat(uldEl.value)||0:0;
+  const voos=facnEl?parseFloat(facnEl.value)||0:0;
   // Verifica duplicata
   const exists=movData.some(d=>d.ano===ano&&d.mes===mes&&d.sub===sub);
   if(exists&&!force){
@@ -1584,7 +1596,7 @@ function saveMovimentacao(force=false){
     return;
   }
   movData=movData.filter(d=>!(d.ano===ano&&d.mes===mes&&d.sub===sub));
-  movData.push({ano,mes,sub,peso,vol,voos:0,ulds:0});
+  movData.push({ano,mes,sub,peso,vol,voos,ulds});
   hideMovUpdate();
   updateDashMonthSelect();
   renderCurrentSector();
