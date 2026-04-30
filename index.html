@@ -94,6 +94,28 @@
   <span style="font-size:12px;color:#64748b">Carregando dados...</span>
 </div>
 
+<!-- MODAL DE ERRO PERSONALIZADO -->
+<div id="wfs-error-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:0;width:460px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,.22);overflow:hidden">
+    <div style="background:#e11d48;padding:16px 20px;display:flex;align-items:center;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span style="font-size:13px;font-weight:700;color:#fff">Erro ao salvar</span>
+      <button onclick="closeWfsErrorModal()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;line-height:1">✕</button>
+    </div>
+    <div style="padding:20px">
+      <div style="font-size:12px;font-weight:600;color:#0f172a;margin-bottom:6px" id="wfs-error-title">Não foi possível completar a operação.</div>
+      <div style="background:#fff5f7;border:1px solid #fecdd3;border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="font-size:10px;font-weight:600;color:#be123c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Detalhe do erro</div>
+        <div id="wfs-error-detail" style="font-size:11px;color:#64748b;font-family:monospace;word-break:break-all;line-height:1.6">—</div>
+      </div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:16px">Verifique se a tabela existe no Supabase e se as permissões estão configuradas corretamente para o schema <strong style="color:#0f172a">dash-sla</strong>.</div>
+      <div style="display:flex;justify-content:flex-end">
+        <button onclick="closeWfsErrorModal()" style="background:#0f172a;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="header">
   <div class="logo">
     <img class="logo-img" src="https://lh3.googleusercontent.com/d/1sNzDKhdh2zH8d8DoyqIjx8l5LzBEXN5g" alt="WFS Logo" onerror="this.style.display='none'">
@@ -1450,7 +1472,7 @@ async function saveImportacao() {
     showMsg('msg-imp');
   } catch(e) {
     console.error(e);
-    showErr('err-imp');
+    showErrModal('Falha ao salvar Importação — por Companhia', e.message);
   }
 }
 
@@ -1575,6 +1597,8 @@ function updatePeriodoInfo(){
 // ============================================================
 function showMsg(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',3000);}}
 function showErr(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',4000);}}
+function showErrModal(title,detail){document.getElementById('wfs-error-title').textContent=title||'Não foi possível completar a operação.';document.getElementById('wfs-error-detail').textContent=detail||'Erro desconhecido.';document.getElementById('wfs-error-modal').style.display='flex';}
+function closeWfsErrorModal(){document.getElementById('wfs-error-modal').style.display='none';}
 
 async function saveSLA(){
   const ano=parseInt(document.getElementById('form-ano').value);
@@ -1588,7 +1612,7 @@ async function saveSLA(){
     rows.forEach(r=>{slaData=slaData.filter(d=>!(d.ano===r.ano&&d.mes===r.mes&&d.setor===r.setor));slaData.push(r);});
     clearSLAFields();
     updateFormMonthHighlights();showMsg('msg-sla');
-  }catch(e){console.error(e);showErr('err-sla');}
+  }catch(e){console.error(e);showErrModal('Falha ao salvar SLA PCGs',e.message);}
 }
 
 async function saveRaioX(){
@@ -1604,7 +1628,7 @@ async function saveRaioX(){
     raioxData.push({ano,mes,auditados:aud,inspecionados:insp,nao_inspecionados:nao});
     clearRaioXFields();
     updateFormMonthHighlights();showMsg('msg-raiox');
-  }catch(e){console.error(e);showErr('err-raiox');}
+  }catch(e){console.error(e);showErrModal('Falha ao salvar Raio-X',e.message);}
 }
 
 async function saveAuditoria(){
@@ -1618,7 +1642,7 @@ async function saveAuditoria(){
     auditoriaData.push({ano,mes,resultado:res});
     clearAuditoriaFields();
     updateFormMonthHighlights();showMsg('msg-auditoria');
-  }catch(e){console.error(e);showErr('err-auditoria');}
+  }catch(e){console.error(e);showErrModal('Falha ao salvar Auditoria 6S',e.message);}
 }
 
 function saveMovimentacao(force=false){
