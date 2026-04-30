@@ -489,10 +489,10 @@
       <p style="font-size:11px;color:var(--slate);margin-bottom:12px">Dados históricos 2024–2026 já estão pré-carregados no sistema.</p>
       <div class="form-row">
         <div class="filter-group"><span class="filter-label">Ano</span>
-          <select class="filter-select" id="form-mov-ano"><option value="2026">2026</option><option value="2025">2025</option></select>
+          <select class="filter-select" id="form-mov-ano" onchange="onMovMesChange()"><option value="2026">2026</option><option value="2025">2025</option></select>
         </div>
         <div class="filter-group"><span class="filter-label">Mês</span>
-          <select class="filter-select" id="form-mov-mes">
+          <select class="filter-select" id="form-mov-mes" onchange="onMovMesChange()">
             <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
             <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
             <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
@@ -502,22 +502,24 @@
       </div>
       <div class="filter-group" style="margin-bottom:10px">
         <span class="filter-label">Setor</span>
-        <select class="filter-select" id="form-mov-setor" onchange="updateSubsetor()">
+        <select class="filter-select" id="form-mov-setor" onchange="onMovSetorChange()">
           <option value="GRANEL">Internação Granel</option>
           <option value="PALETIZADA">Internação Paletizada</option>
           <option value="NACIONAL">Carga Nacional</option>
           <option value="EXPORTAÇÃO">Exportação</option>
+          <option value="IMPORTAÇÃO">Importação</option>
         </select>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Peso (kg)</label><input type="number" id="mov-peso" placeholder="ex: 1500000"></div>
         <div class="form-group"><label>Volume</label><input type="number" id="mov-vol" placeholder="ex: 95000"></div>
       </div>
-      <div class="form-row" id="mov-extras">
-        <div class="form-group"><label>Qtd Voos</label><input type="number" id="mov-voos" placeholder="ex: 640"></div>
-        <div class="form-group"><label>Qtd ULDs</label><input type="number" id="mov-ulds" placeholder="ex: 4100"></div>
+      <div id="msg-mov-update" style="display:none;background:#fef9c3;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#92400e">
+        ⚠ Já existem dados para este mês/setor.
+        <button onclick="saveMovimentacao(true)" style="margin-left:10px;background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Atualizar</button>
+        <button onclick="hideMovUpdate()" style="margin-left:6px;background:transparent;border:1px solid #fbbf24;color:#92400e;padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif">Cancelar</button>
       </div>
-      <button class="save-btn" onclick="saveMovimentacao()">Salvar Movimentação</button>
+      <button class="save-btn" onclick="saveMovimentacao(false)">Salvar Movimentação</button>
       <div class="success-msg" id="msg-mov">✓ Salvo!</div>
       <div class="error-msg" id="err-mov">✗ Erro ao salvar.</div>
     </div>
@@ -1108,13 +1110,19 @@ function renderImportacao(){
   makeCIADonut('c-imp-tc4',totA2.tc4,totL2.tc4,totT2.tc4);
 
   const totA=getImpAcum('ATLAS',ano,mes),totL=getImpAcum('LATAM',ano,mes),totT=getImpAcum('TAMPA',ano,mes);
-  renderKPI('kpi-importacao',[
+  const movImpAcum=getAcum('IMPORTAÇÃO',ano,mes);
+  const kpiImp=[
     {label:'Peso Total (todas CIAs)',val:fmtM(totA.peso+totL.peso+totT.peso),delta:null,sub:`${ano} acum.`},
     {label:'ULDs Total',val:fmt(totA.ulds+totL.ulds+totT.ulds),delta:null,sub:''},
     {label:'Atlas — Peso',val:fmtM(totA.peso),delta:null,sub:''},
     {label:'Latam — Peso',val:fmtM(totL.peso),delta:null,sub:''},
     {label:'Tampa — Peso',val:fmtM(totT.peso),delta:null,sub:''},
-  ]);
+  ];
+  if(movImpAcum.peso>0){
+    kpiImp.unshift({label:'Peso Setor (Manual)',val:fmtM(movImpAcum.peso),delta:null,sub:`${ano} acum. — inserido manualmente`});
+    kpiImp.push({label:'Volume Setor (Manual)',val:fmt(movImpAcum.vol),delta:null,sub:`${ano} acum.`});
+  }
+  renderKPI('kpi-importacao',kpiImp);
 }
 
 function buildSLAMesSelect(){
@@ -1403,9 +1411,30 @@ async function saveImportacao() {
   }
 }
 
-function updateSubsetor(){
-  const s=document.getElementById('form-mov-setor').value;
-  document.getElementById('mov-extras').style.display=['NACIONAL','PALETIZADA'].includes(s)?'grid':'none';
+function onMovSetorChange(){
+  // ao trocar setor, recarrega dados do mês selecionado
+  onMovMesChange();
+}
+
+function onMovMesChange(){
+  const ano=parseInt(document.getElementById('form-mov-ano').value);
+  const mes=parseInt(document.getElementById('form-mov-mes').value);
+  const sub=document.getElementById('form-mov-setor').value;
+  // Esconde aviso de update
+  hideMovUpdate();
+  // Carrega dados existentes ou limpa campos
+  const existing=movData.find(d=>d.ano===ano&&d.mes===mes&&d.sub===sub);
+  if(existing){
+    document.getElementById('mov-peso').value=existing.peso||'';
+    document.getElementById('mov-vol').value=existing.vol||'';
+  } else {
+    document.getElementById('mov-peso').value='';
+    document.getElementById('mov-vol').value='';
+  }
+}
+
+function hideMovUpdate(){
+  document.getElementById('msg-mov-update').style.display='none';
 }
 
 // ============================================================
@@ -1543,17 +1572,24 @@ async function saveAuditoria(){
   }catch(e){console.error(e);showErr('err-auditoria');}
 }
 
-function saveMovimentacao(){
+function saveMovimentacao(force=false){
   const ano=parseInt(document.getElementById('form-mov-ano').value);
   const mes=parseInt(document.getElementById('form-mov-mes').value);
   const sub=document.getElementById('form-mov-setor').value;
   const peso=parseFloat(document.getElementById('mov-peso').value)||0;
   const vol=parseFloat(document.getElementById('mov-vol').value)||0;
-  const voos=parseFloat(document.getElementById('mov-voos').value)||0;
-  const ulds=parseFloat(document.getElementById('mov-ulds').value)||0;
+  // Verifica duplicata
+  const exists=movData.some(d=>d.ano===ano&&d.mes===mes&&d.sub===sub);
+  if(exists&&!force){
+    document.getElementById('msg-mov-update').style.display='block';
+    return;
+  }
   movData=movData.filter(d=>!(d.ano===ano&&d.mes===mes&&d.sub===sub));
-  movData.push({ano,mes,sub,peso,vol,voos,ulds});
-  updateDashMonthSelect();showMsg('msg-mov');
+  movData.push({ano,mes,sub,peso,vol,voos:0,ulds:0});
+  hideMovUpdate();
+  updateDashMonthSelect();
+  renderCurrentSector();
+  showMsg('msg-mov');
 }
 
 // ============================================================
