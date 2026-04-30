@@ -507,7 +507,7 @@
           <option value="PALETIZADA">Internação Paletizada</option>
           <option value="NACIONAL">Carga Nacional</option>
           <option value="EXPORTAÇÃO">Exportação</option>
-          <option value="IMPORTAÇÃO">Importação</option>
+
         </select>
       </div>
       <div class="form-row">
@@ -553,7 +553,7 @@
           <div class="form-group"><label>Volume</label><input type="number" id="imp-v-vol" placeholder="ex: 5000"></div>
           <div class="form-group"><label>ULD</label><input type="number" id="imp-v-uld" placeholder="ex: 120"></div>
           <div class="form-group"><label>TC4</label><input type="number" id="imp-v-tc4" placeholder="ex: 95"></div>
-          <div class="form-group"><label>N° Voo</label><input type="text" id="imp-v-num" placeholder="ex: GT1234"></div>
+
           <div>
             <button onclick="addImpVoo()" style="background:#0f172a;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">+ Adicionar</button>
           </div>
@@ -1327,7 +1327,7 @@ function renderImpVoosList() {
   const rows = impVoosTemp.map((v, i) => `
     <tr style="border-bottom:1px solid #f1f5f9">
       <td style="padding:5px 8px;font-size:11px;color:#64748b">${v.cia}</td>
-      <td style="padding:5px 8px;font-size:11px">${v.num_voo||'—'}</td>
+
       <td style="padding:5px 8px;font-size:11px;text-align:right">${new Intl.NumberFormat('pt-BR').format(v.peso)}</td>
       <td style="padding:5px 8px;font-size:11px;text-align:right">${v.vol}</td>
       <td style="padding:5px 8px;font-size:11px;text-align:right">${v.uld}</td>
@@ -1338,7 +1338,7 @@ function renderImpVoosList() {
     <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
       <thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
         <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:600">CIA</th>
-        <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:600">N° Voo</th>
+
         <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">Peso</th>
         <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">Vol</th>
         <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b;font-weight:600">ULD</th>
@@ -1356,11 +1356,10 @@ function addImpVoo() {
   const vol = parseFloat(document.getElementById('imp-v-vol').value) || 0;
   const uld = parseFloat(document.getElementById('imp-v-uld').value) || 0;
   const tc4 = parseFloat(document.getElementById('imp-v-tc4').value) || 0;
-  const num_voo = document.getElementById('imp-v-num').value.trim();
   if (!peso && !uld) { alert('Informe ao menos o Peso ou ULD do voo.'); return; }
-  impVoosTemp.push({ cia, peso, vol, uld, tc4, num_voo });
+  impVoosTemp.push({ cia, peso, vol, uld, tc4 });
   // limpar campos do voo
-  ['imp-v-peso','imp-v-vol','imp-v-uld','imp-v-tc4','imp-v-num'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['imp-v-peso','imp-v-vol','imp-v-uld','imp-v-tc4'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   renderImpVoosList();
 }
 
@@ -1398,7 +1397,7 @@ async function saveImportacao() {
 
   // Salva voos individuais no Supabase (tabela importacao_voos)
   try {
-    const rows = impVoosTemp.map(v => ({ ano, mes, cia: v.cia, num_voo: v.num_voo||null, peso: v.peso, vol: v.vol, uld: v.uld, tc4: v.tc4 }));
+    const rows = impVoosTemp.map(v => ({ ano, mes, cia: v.cia, peso: v.peso, vol: v.vol, uld: v.uld, tc4: v.tc4 }));
     await sbFetch('importacao_voos', 'POST', rows);
     impVoosTemp = [];
     renderImpVoosList();
