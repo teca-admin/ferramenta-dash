@@ -680,6 +680,26 @@ async function loadFromSupabase() {
     slaData = slaRes || [];
     raioxData = rxRes || [];
     auditoriaData = audRes || [];
+    // Importação: Supabase sobrescreve dados hardcoded
+    try {
+      const impRes = await sbFetch('importacao_consolidado', 'GET', null, '?select=*&order=ano,mes,cia');
+      if (impRes && impRes.length) {
+        impRes.forEach(r => {
+          impData = impData.filter(x => !(x.ano===r.ano && x.mes===r.mes && x.cia===r.cia));
+          impData.push({ ano:r.ano, mes:r.mes, cia:r.cia, uld:r.uld_total, tc4:r.tc4_total, peso:r.peso_total, vol:r.vol_total, voos:r.qtd_voos });
+        });
+      }
+    } catch(e) { console.warn('importacao load error:', e); }
+    // Movimentação: Supabase sobrescreve dados hardcoded
+    try {
+      const movRes = await sbFetch('movimentacao', 'GET', null, '?select=*&order=ano,mes,sub');
+      if (movRes && movRes.length) {
+        movRes.forEach(r => {
+          movData = movData.filter(x => !(x.ano===r.ano && x.mes===r.mes && x.sub===r.sub));
+          movData.push({ ano:r.ano, mes:r.mes, sub:r.sub, peso:r.peso, vol:r.vol, voos:r.voos, ulds:r.ulds });
+        });
+      }
+    } catch(e) { console.warn('movimentacao load error:', e); }
     setDbStatus(true);
   } catch(e) {
     console.error('Supabase load error:', e);
@@ -1645,7 +1665,7 @@ async function saveAuditoria(){
   }catch(e){console.error(e);showErrModal('Falha ao salvar Auditoria 6S',e.message);}
 }
 
-function saveMovimentacao(force=false){
+async function saveMovimentacao(force=false){
   const ano=parseInt(document.getElementById('form-mov-ano').value);
   const mes=parseInt(document.getElementById('form-mov-mes').value);
   const sub=document.getElementById('form-mov-setor').value;
@@ -1664,9 +1684,15 @@ function saveMovimentacao(force=false){
   movData=movData.filter(d=>!(d.ano===ano&&d.mes===mes&&d.sub===sub));
   movData.push({ano,mes,sub,peso,vol,voos,ulds});
   hideMovUpdate();
-  updateDashMonthSelect();
-  renderCurrentSector();
-  showMsg('msg-mov');
+  try {
+    await sbFetch('movimentacao','POST',[{ano,mes,sub,peso,vol,voos,ulds}]);
+    updateDashMonthSelect();
+    renderCurrentSector();
+    showMsg('msg-mov');
+  } catch(e) {
+    console.error(e);
+    showErrModal('Falha ao salvar Movimentação',e.message);
+  }
 }
 
 // ============================================================

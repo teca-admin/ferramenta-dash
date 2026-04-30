@@ -112,6 +112,28 @@ ORDER BY ano, mes, cia;
 GRANT SELECT ON "dash-sla".importacao_consolidado TO anon;
 
 -- ============================================================
+-- TABELA: movimentacao
+-- Dados mensais de movimentação por subsetor (GRANEL, PALETIZADA, NACIONAL, EXPORTAÇÃO)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS "dash-sla".movimentacao (
+  id        BIGSERIAL PRIMARY KEY,
+  ano       INTEGER NOT NULL,
+  mes       INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
+  sub       TEXT    NOT NULL CHECK (sub IN ('GRANEL','PALETIZADA','NACIONAL','EXPORTAÇÃO')),
+  peso      NUMERIC(14,2) NOT NULL DEFAULT 0,
+  vol       NUMERIC(14,2) NOT NULL DEFAULT 0,
+  voos      INTEGER NOT NULL DEFAULT 0,
+  ulds      INTEGER NOT NULL DEFAULT 0,
+  criado_em TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (ano, mes, sub)
+);
+
+ALTER TABLE "dash-sla".movimentacao ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all_mov" ON "dash-sla".movimentacao FOR ALL TO anon USING (true) WITH CHECK (true);
+GRANT ALL ON "dash-sla".movimentacao TO anon;
+GRANT ALL ON SEQUENCE "dash-sla".movimentacao_id_seq TO anon;
+
+-- ============================================================
 -- FIM — após rodar, acesse o dashboard, vá em Entrada de Dados
 -- → Importação, adicione os voos e salve. O indicador
 -- "Supabase OK" deve aparecer verde no topo da página.
