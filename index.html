@@ -1099,8 +1099,8 @@ function renderExportacao(){
   if(isViewMode){
     const eAm=getMensal('EXPORTAÇÃO',ant,mes);
     const eBm=getMensal('EXPORTAÇÃO',ano,mes);
-    makeBarCompare('c-exp-peso',[String(ant),String(ano)],[eAm.peso],[eBm.peso]);
-    makeBarCompare('c-exp-vol',[String(ant),String(ano)],[eAm.vol],[eBm.vol]);
+    makeTotalBar('c-exp-peso',String(ant),String(ano),eAm.peso,eBm.peso);
+    makeTotalBar('c-exp-vol',String(ant),String(ano),eAm.vol,eBm.vol);
     return;
   }
   const isA=currentView==='acumulado';
