@@ -1,11 +1,22 @@
-<div align="center">
+# WFS Dashboard — Movimentação de Cargas
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Dashboard interno da Worldflight Services para acompanhamento de movimentação de cargas.
 
-  <h1>Built with AI Studio</h2>
+## Deploy
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+1. Suba este repositório no GitHub
+2. Importe no [Vercel](https://vercel.com) → **Add New Project** → seleciona o repo
+3. Framework Preset: **Other** → clica **Deploy**
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Banco de dados
 
-</div>
+Execute o arquivo `wfs-schema.sql` no **SQL Editor** do seu Supabase self-hosted antes do primeiro uso.
+
+## Estrutura
+
+```
+index.html      ← aplicação completa (HTML + CSS + JS)
+vercel.json     ← configuração de roteamento do Vercel
+wfs-schema.sql  ← SQL para criar o schema e tabelas no Supabase
+README.md       ← este arquivo
+```
